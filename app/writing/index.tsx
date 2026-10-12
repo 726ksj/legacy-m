@@ -9,13 +9,21 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../../lib/supabase";
-import { colors } from "../../lib/theme";
+import { categoryColors, colors } from "../../lib/theme";
 import { fetchWritingGroups, type WritingGroup } from "../../lib/writing";
 import EmptyState from "../../components/EmptyState";
 import ScreenHeader from "../../components/ScreenHeader";
+import StatusChip from "../../components/StatusChip";
+import {
+  fetchWritingProgress,
+  type WritingSetProgress,
+} from "../../lib/progress";
 
 export default function WritingListScreen() {
   const [groups, setGroups] = useState<WritingGroup[]>([]);
+  const [progressBySet, setProgressBySet] = useState<
+    Map<string, WritingSetProgress>
+  >(new Map());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +38,12 @@ export default function WritingListScreen() {
       return;
     }
     try {
-      setGroups(await fetchWritingGroups());
+      const [nextGroups, nextProgress] = await Promise.all([
+        fetchWritingGroups(),
+        fetchWritingProgress(),
+      ]);
+      setGroups(nextGroups);
+      setProgressBySet(nextProgress);
     } catch {
       setError("서술형 목록을 불러오지 못했습니다.");
     }
@@ -50,7 +63,7 @@ export default function WritingListScreen() {
 
   return (
     <View className="flex-1 bg-blush">
-      <ScreenHeader title="문장 학습" back />
+      <ScreenHeader title="어순 배열" back />
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -70,7 +83,7 @@ export default function WritingListScreen() {
         >
           {error && (
             <View className="rounded-xl bg-red-50 px-4 py-3">
-              <Text className="text-sm font-semibold text-red-500">
+              <Text className="text-base font-semibold text-red-500">
                 {error}
               </Text>
             </View>
@@ -86,32 +99,66 @@ export default function WritingListScreen() {
 
           {groups.map((group) => (
             <View key={group.key} className="gap-3">
-              <Text className="text-sm font-bold text-ink-soft">
+              <Text className="text-base font-bold text-ink-soft">
                 {group.label}
               </Text>
               <View className="gap-3">
-                {group.sets.map((set) => (
-                  <Pressable
-                    key={set.id}
-                    onPress={() => router.push(`/writing/${set.id}`)}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-                    className="rounded-3xl border border-line bg-white px-5 py-4 shadow-sm shadow-brand/20"
-                  >
-                    <View className="flex-row items-center justify-between">
-                      <Text className="flex-1 text-base font-bold text-ink">
-                        {set.title}
-                      </Text>
-                      <View className="rounded-full bg-cream px-3 py-1">
-                        <Text className="text-xs font-bold text-berry">
-                          {set.sentenceCount}문장
-                        </Text>
+                {group.sets.map((set) => {
+                  const progress = progressBySet.get(set.id);
+                  const status = progress?.status ?? "not_started";
+                  return (
+                    <Pressable
+                      key={set.id}
+                      onPress={() => router.push(`/writing/${set.id}`)}
+                      style={{
+                        backgroundColor: categoryColors.writing.bg,
+                        borderWidth: 1,
+                        borderColor: categoryColors.writing.border,
+                      }}
+                      className="rounded-3xl px-5 py-5 active:opacity-80"
+                    >
+                      <View className="flex-row items-center justify-between gap-3">
+                        <View className="flex-1 flex-row items-center gap-2">
+                          {set.week !== null && (
+                            <View
+                              className="rounded-full px-2.5 py-0.5"
+                              style={{
+                                backgroundColor: categoryColors.writing.accent,
+                              }}
+                            >
+                              <Text
+                                className="text-sm font-bold"
+                                style={{ color: categoryColors.writing.fg }}
+                              >
+                                {set.week}주차
+                              </Text>
+                            </View>
+                          )}
+                          <Text className="flex-1 text-lg font-bold text-ink">
+                            {set.title}
+                          </Text>
+                        </View>
+                        <StatusChip status={status} />
                       </View>
-                    </View>
-                    <Text className="mt-2 text-xs font-bold text-brand-dark">
-                      {set.week ? `${set.week}주차 · ` : ""}문장 암기 ›
-                    </Text>
-                  </Pressable>
-                ))}
+                      <Text className="mt-2 text-sm text-ink-soft">
+                        문장 {set.sentenceCount}개
+                        {progress?.points != null && progress.maxPoints != null
+                          ? ` · ${progress.points} / ${progress.maxPoints}점`
+                          : ""}
+                      </Text>
+                      <Text
+                        className="mt-2 text-sm font-bold"
+                        style={{ color: categoryColors.writing.fg }}
+                      >
+                        {status === "completed"
+                          ? "다시 보기 ›"
+                          : status === "in_progress"
+                            ? "이어서 하기 ›"
+                            : "시작하기 ›"}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
           ))}

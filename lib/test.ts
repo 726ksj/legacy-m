@@ -15,6 +15,8 @@ export interface TestStatus {
   first_score: number | null;
   final_score: number | null;
   total_score: number | null;
+  // 지난 주차 시험을 늦게 응시하는 경우(지각 응시).
+  is_late: boolean;
 }
 
 export interface AttemptQuestion {
@@ -45,20 +47,28 @@ export interface AnswerResult {
   finished: boolean;
 }
 
+// 시험 이름. round_no 1~5는 응시 순서이고, 학생에게는 아래 이름으로 보여준다.
 export const ROUND_TITLE: Record<number, string> = {
-  1: "1회 · 랜덤 테스트",
-  2: "2회 · 틀린 단어만",
-  3: "3회 · 랜덤 재시험",
-  4: "4회 · 3회 오답만",
-  5: "5회 · 연속 오답만",
+  1: "1차 시험",
+  2: "1차 재시험",
+  3: "2차 시험",
+  4: "2차 재시험",
+  5: "3차 재시험",
 };
 
-// 재시험 회차(틀린 단어만 다시 푸는 회차) 안내 문구.
+// 재시험(틀린 단어만 다시 푸는 시험) 안내 문구.
 export const RETEST_DESCRIPTION: Record<number, string> = {
-  2: "1회에서 틀린 단어만 다시 풀어요",
-  4: "3회에서 틀린 단어만 다시 풀어요",
-  5: "4회에서도 틀린 단어만 다시 풀어요",
+  2: "1차 시험에서 틀린 단어만 다시 풀어요",
+  4: "2차 시험에서 틀린 단어만 다시 풀어요",
+  5: "두 번 이상 틀린 단어만 마지막으로 다시 풀어요",
 };
+
+// 다음 시험을 시작하는 버튼 문구.
+export function startLabel(roundNo: number): string {
+  return RETEST_DESCRIPTION[roundNo]
+    ? `틀린 단어 다시 풀기 (${ROUND_TITLE[roundNo]})`
+    : `${ROUND_TITLE[roundNo]} 시작`;
+}
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(fn, args);

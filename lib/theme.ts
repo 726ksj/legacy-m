@@ -14,3 +14,24 @@ export const colors = {
 
 // 로고 아이콘의 분홍 그라데이션.
 export const brandGradient = ["#eb89a8", "#df6e92"] as const;
+
+// 학습 유형별 색(화면설계서 기준: 단어 민트, 서술형 분홍, 순서 파랑, 어법 보라).
+// 카드/목록의 배경(bg), 글자(fg), 칩 배경(accent)에 같이 쓴다.
+export const categoryColors = {
+  vocab: { bg: "#e9f7f1", fg: "#1f8a5f", accent: "#cbeedd", border: "#a8dcc3" },
+  writing: {
+    bg: "#f9e0ea",
+    fg: "#c23d64",
+    accent: "#f3c4d4",
+    border: "#eeaac1",
+  },
+  order: { bg: "#eaf1fb", fg: "#2f5fa8", accent: "#d3e1f5", border: "#b7cbe9" },
+  grammar: {
+    bg: "#f1eafb",
+    fg: "#6c3fa8",
+    accent: "#e1d4f5",
+    border: "#cbb7e9",
+  },
+} as const;
+
+export type CategoryKey = keyof typeof categoryColors;

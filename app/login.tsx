@@ -32,12 +32,12 @@ function FormInput({
 }) {
   return (
     <View className="gap-2">
-      <Text className="text-xs font-bold uppercase tracking-wider text-ink-soft">
+      <Text className="text-sm font-bold uppercase tracking-wider text-ink-soft">
         {label}
       </Text>
       <TextInput
         placeholderTextColor={colors.inkMuted}
-        className={`rounded-2xl bg-blush px-4 py-4 text-base text-ink border-2 ${
+        className={`rounded-2xl bg-blush px-4 py-4 text-lg text-ink border-2 ${
           focused ? "border-brand bg-white" : "border-transparent"
         }`}
         {...props}
@@ -124,17 +124,17 @@ export default function LoginScreen() {
                 resizeMode="contain"
               />
             </View>
-            <Text className="mt-5 text-2xl font-extrabold tracking-wide text-white">
+            <Text className="mt-5 text-3xl font-extrabold tracking-wide text-white">
               LEGACY M
             </Text>
-            <Text className="mt-1.5 text-sm font-medium text-cream">
+            <Text className="mt-1.5 text-base font-medium text-cream">
               머릿속에 남는 기억
             </Text>
           </View>
         </LinearGradient>
 
         <View className="-mt-9 mx-5 rounded-3xl border border-line bg-white px-6 pb-8 pt-8 shadow-lg shadow-brand/20">
-          <Text className="text-sm text-ink-soft">
+          <Text className="text-base text-ink-soft">
             아이디와 비밀번호로 로그인해주세요
           </Text>
 
@@ -170,7 +170,7 @@ export default function LoginScreen() {
               onPress={() => setRememberId((v) => !v)}
               className="flex-row items-center justify-between py-1"
             >
-              <Text className="text-sm font-medium text-ink">
+              <Text className="text-base font-medium text-ink">
                 아이디 저장
               </Text>
               <Switch
@@ -182,7 +182,7 @@ export default function LoginScreen() {
 
             {error && (
               <View className="rounded-xl bg-red-50 px-4 py-3">
-                <Text className="text-sm font-semibold text-red-500">
+                <Text className="text-base font-semibold text-red-500">
                   {error}
                 </Text>
               </View>
@@ -199,7 +199,7 @@ export default function LoginScreen() {
               {loading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text className="text-base font-bold text-white">로그인</Text>
+                <Text className="text-lg font-bold text-white">로그인</Text>
               )}
             </Pressable>
           </View>

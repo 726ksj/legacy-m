@@ -57,7 +57,7 @@ export default function StudyScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
         }
       >
-        <Text className="mt-6 text-sm text-ink-soft">원하는 학습 유형을 선택하세요</Text>
+        <Text className="mt-6 text-base text-ink-soft">원하는 학습 유형을 선택하세요</Text>
 
         <View className="mt-4">
           <StudyCardList totalSets={totalSets} testedSetCount={testedSetCount} />

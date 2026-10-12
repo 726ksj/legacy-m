@@ -1,15 +1,34 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { fetchVocabOverview } from "../../lib/vocab";
+import {
+  fetchWeeklyCourses,
+  summarizeWeekly,
+  type WeeklySummary,
+} from "../../lib/weekly";
 import { StudyCardList } from "../../components/StudyCards";
 import { colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 
 export default function HomeScreen() {
   const [name, setName] = useState<string | null>(null);
+  const [weekly, setWeekly] = useState<WeeklySummary>({
+    total: 0,
+    done: 0,
+    lateCount: 0,
+  });
+  // 학습 유형 카드(단어 학습 n/m개 완료)에 쓰는 전체 단어장 현황.
   const [totalSets, setTotalSets] = useState(0);
   const [testedSetCount, setTestedSetCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -24,12 +43,19 @@ export default function HomeScreen() {
       return;
     }
 
-    const [{ data: profile }, overview] = await Promise.all([
-      supabase.from("profiles").select("name").eq("id", session.user.id).single(),
+    const [{ data: profile }, courses, overview] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("name")
+        .eq("id", session.user.id)
+        .single(),
+      // 이번 주 요약을 못 불러와도 홈 화면 전체가 멈추지 않게 빈 목록으로 대체한다.
+      fetchWeeklyCourses().catch(() => []),
       fetchVocabOverview(),
     ]);
 
     setName(profile?.name ?? null);
+    setWeekly(summarizeWeekly(courses));
     setTotalSets(overview.totalSets);
     setTestedSetCount(overview.testedSetCount);
   }, []);
@@ -44,7 +70,9 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [load]);
 
-  const progressPct = totalSets === 0 ? 0 : Math.round((testedSetCount / totalSets) * 100);
+  // 이번 주(현재 주차) 시험 중 끝낸 비율. 지난 주 미완료(지각 응시)는 따로 센다.
+  const progressPct =
+    weekly.total === 0 ? 0 : Math.round((weekly.done / weekly.total) * 100);
 
   if (loading) {
     return (
@@ -75,30 +103,56 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerClassName="px-6 pb-10"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.brand}
+          />
         }
       >
-        <Text className="mt-6 text-2xl font-extrabold text-ink">
+        <Text className="mt-6 text-3xl font-extrabold text-ink">
           안녕하세요, {name ?? "회원"}님
         </Text>
-        <Text className="mt-1 text-sm text-ink-soft">이번 주 학습을 이어가 볼까요?</Text>
+        <Text className="mt-1 text-base text-ink-soft">
+          이번 주 학습을 이어가 볼까요?
+        </Text>
 
-        <View className="mt-6 rounded-3xl border border-line bg-white px-5 py-5 shadow-sm shadow-brand/20">
+        {/* 박스 전체를 누르면 이번 주에 응시해야 할 시험 목록(이번 주 할 일)으로 이동한다. */}
+        <Pressable
+          onPress={() => router.push("/week")}
+          style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+          className="mt-6 rounded-3xl border border-line bg-white px-6 py-6 shadow-sm shadow-brand/20"
+        >
           <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-bold text-ink">이번 주 진행률</Text>
-            <Text className="text-sm font-extrabold text-berry">{progressPct}%</Text>
+            <Text className="text-xl font-bold text-ink">이번 주 진행률</Text>
+            <View className="flex-row items-center gap-1">
+              <Text className="text-2xl font-extrabold text-berry">
+                {progressPct}%
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={22}
+                color={colors.inkMuted}
+              />
+            </View>
           </View>
-          <View className="mt-3 h-2.5 w-full rounded-full bg-blush">
-            <View className="h-2.5 rounded-full bg-brand" style={{ width: `${progressPct}%` }} />
+          <View className="mt-4 h-3 w-full rounded-full bg-blush">
+            <View
+              className="h-3 rounded-full bg-brand"
+              style={{ width: `${progressPct}%` }}
+            />
           </View>
-          <Text className="mt-3 text-xs text-ink-soft">
-            {totalSets === 0
-              ? "아직 배정된 단어장이 없어요"
-              : `단어장 ${totalSets}개 중 ${testedSetCount}개 완료`}
+          <Text className="mt-4 text-base text-ink-soft">
+            {weekly.total === 0
+              ? "이번 주 할 일이 없어요"
+              : `이번 주 시험 ${weekly.total}개 중 ${weekly.done}개 완료`}
+            {weekly.lateCount > 0 ? ` · 지각 응시 ${weekly.lateCount}개` : ""}
           </Text>
-        </View>
+        </Pressable>
 
-        <Text className="mb-3 mt-8 text-sm font-bold text-ink-soft">학습 유형</Text>
+        <Text className="mb-3 mt-8 text-base font-bold text-ink-soft">
+          학습 유형
+        </Text>
         <StudyCardList totalSets={totalSets} testedSetCount={testedSetCount} />
       </ScrollView>
     </View>

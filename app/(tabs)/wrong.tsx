@@ -42,7 +42,7 @@ function Chip({
         selected ? "border-brand bg-brand" : "border-line bg-white"
       }`}
     >
-      <Text className={`text-xs font-bold ${selected ? "text-white" : "text-ink-soft"}`}>
+      <Text className={`text-sm font-bold ${selected ? "text-white" : "text-ink-soft"}`}>
         {label}
       </Text>
     </Pressable>
@@ -74,17 +74,17 @@ function NoteCard({ note }: { note: WrongNote }) {
     <View className="rounded-3xl border border-line bg-white px-5 py-4 shadow-sm shadow-brand/20">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1">
-          <Text className="text-lg font-extrabold text-ink">{note.word}</Text>
-          <Text className="mt-0.5 text-sm text-ink-soft">{note.meaning}</Text>
+          <Text className="text-xl font-extrabold text-ink">{note.word}</Text>
+          <Text className="mt-0.5 text-base text-ink-soft">{note.meaning}</Text>
         </View>
         {graduated ? (
           <View className="flex-row items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1">
             <Ionicons name="school" size={13} color="#059669" />
-            <Text className="text-xs font-bold text-emerald-600">마스터</Text>
+            <Text className="text-sm font-bold text-emerald-600">마스터</Text>
           </View>
         ) : (
           <View className="rounded-full bg-cream px-2.5 py-1">
-            <Text className="text-xs font-bold text-berry">{note.wrong_count}번 틀림</Text>
+            <Text className="text-sm font-bold text-berry">{note.wrong_count}번 틀림</Text>
           </View>
         )}
       </View>
@@ -93,17 +93,17 @@ function NoteCard({ note }: { note: WrongNote }) {
         {!graduated && (
           <View className="flex-row items-center gap-2 rounded-full bg-blush px-3 py-1">
             <GraduationSteps streak={note.streak} />
-            <Text className="text-xs font-semibold text-ink-soft">
+            <Text className="text-sm font-semibold text-ink-soft">
               마스터까지 {GRADUATION_STEPS - note.streak}번
             </Text>
           </View>
         )}
         {note.return_count > 0 && (
           <View className="rounded-full bg-red-50 px-2.5 py-1">
-            <Text className="text-xs font-bold text-red-500">복귀 {note.return_count}</Text>
+            <Text className="text-sm font-bold text-red-500">복귀 {note.return_count}</Text>
           </View>
         )}
-        <Text className="text-xs text-ink-soft">
+        <Text className="text-sm text-ink-soft">
           {note.week ? `${note.week}주차 · ` : ""}
           {note.set_title}
           {graduated && note.graduated_at ? ` · ${formatDate(note.graduated_at)} 마스터` : ""}
@@ -231,30 +231,30 @@ export default function WrongAnswersScreen() {
           >
             {error && (
               <View className="mt-4 rounded-xl bg-red-50 px-4 py-3">
-                <Text className="text-sm font-semibold text-red-500">{error}</Text>
+                <Text className="text-base font-semibold text-red-500">{error}</Text>
               </View>
             )}
 
             <View className="mt-6 rounded-3xl border border-line bg-white px-5 py-5 shadow-sm shadow-brand/20">
               <View className="flex-row items-center justify-between">
-                <Text className="text-sm font-bold text-ink">마스터 현황</Text>
-                <Text className="text-sm font-extrabold text-berry">{graduationPct}%</Text>
+                <Text className="text-base font-bold text-ink">마스터 현황</Text>
+                <Text className="text-base font-extrabold text-berry">{graduationPct}%</Text>
               </View>
               <View className="mt-3 h-2.5 w-full rounded-full bg-blush">
                 <View className="h-2.5 rounded-full bg-brand" style={{ width: `${graduationPct}%` }} />
               </View>
               <View className="mt-4 flex-row">
                 <View className="flex-1">
-                  <Text className="text-xs text-ink-soft">남은 오답</Text>
-                  <Text className="mt-0.5 text-xl font-extrabold text-ink">{active.length}</Text>
+                  <Text className="text-sm text-ink-soft">남은 오답</Text>
+                  <Text className="mt-0.5 text-2xl font-extrabold text-ink">{active.length}</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="text-xs text-ink-soft">마스터</Text>
-                  <Text className="mt-0.5 text-xl font-extrabold text-ink">{graduated.length}</Text>
+                  <Text className="text-sm text-ink-soft">마스터</Text>
+                  <Text className="mt-0.5 text-2xl font-extrabold text-ink">{graduated.length}</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="text-xs text-ink-soft">이번 주 마스터</Text>
-                  <Text className="mt-0.5 text-xl font-extrabold text-ink">{graduatedThisWeek}</Text>
+                  <Text className="text-sm text-ink-soft">이번 주 마스터</Text>
+                  <Text className="mt-0.5 text-2xl font-extrabold text-ink">{graduatedThisWeek}</Text>
                 </View>
               </View>
             </View>
@@ -266,7 +266,7 @@ export default function WrongAnswersScreen() {
                   onPress={() => setTab(key)}
                   className={`flex-1 items-center rounded-xl py-2.5 ${tab === key ? "bg-brand" : ""}`}
                 >
-                  <Text className={`text-sm font-bold ${tab === key ? "text-white" : "text-ink-soft"}`}>
+                  <Text className={`text-base font-bold ${tab === key ? "text-white" : "text-ink-soft"}`}>
                     {key === "active" ? `남은 오답 ${active.length}` : `마스터 보관함 ${graduated.length}`}
                   </Text>
                 </Pressable>
@@ -322,7 +322,7 @@ export default function WrongAnswersScreen() {
                 {starting ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <Text className="text-base font-bold text-white">
+                  <Text className="text-lg font-bold text-white">
                     오답 다시 풀기 ({solvable}문제)
                   </Text>
                 )}

@@ -1,14 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import { router } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../lib/supabase";
 import { fetchVocabOverview, type VocabGroup } from "../lib/vocab";
-import { colors } from "../lib/theme";
+import { categoryColors, colors } from "../lib/theme";
 import ScreenHeader from "../components/ScreenHeader";
 import EmptyState from "../components/EmptyState";
+import StatusChip from "../components/StatusChip";
+import { fetchVocabStatuses, type SetStatus } from "../lib/progress";
 
 export default function VocabScreen() {
   const [groups, setGroups] = useState<VocabGroup[]>([]);
+  const [statuses, setStatuses] = useState<Map<string, SetStatus>>(new Map());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,16 +35,23 @@ export default function VocabScreen() {
     }
 
     try {
-      const overview = await fetchVocabOverview();
+      const [overview, nextStatuses] = await Promise.all([
+        fetchVocabOverview(),
+        fetchVocabStatuses(),
+      ]);
       setGroups(overview.groups);
+      setStatuses(nextStatuses);
     } catch {
       setError("단어장을 불러오지 못했습니다.");
     }
   }, []);
 
-  useEffect(() => {
-    load().finally(() => setLoading(false));
-  }, [load]);
+  // 시험을 마치고 돌아올 때마다 진행 상태를 다시 불러온다.
+  useFocusEffect(
+    useCallback(() => {
+      load().finally(() => setLoading(false));
+    }, [load]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -55,12 +72,18 @@ export default function VocabScreen() {
           className="flex-1"
           contentContainerClassName="px-6 py-6 gap-8"
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.brand}
+            />
           }
         >
           {error && (
             <View className="rounded-xl bg-red-50 px-4 py-3">
-              <Text className="text-sm font-semibold text-red-500">{error}</Text>
+              <Text className="text-base font-semibold text-red-500">
+                {error}
+              </Text>
             </View>
           )}
 
@@ -74,39 +97,66 @@ export default function VocabScreen() {
 
           {groups.map((group) => (
             <View key={group.key} className="gap-3">
-              <Text className="text-sm font-bold text-ink-soft">{group.label}</Text>
+              <Text className="text-base font-bold text-ink-soft">
+                {group.label}
+              </Text>
 
               <View className="gap-3">
-                {group.sets.map((set) => (
-                  <Pressable
-                    key={set.id}
-                    onPress={() => router.push(`/test/${set.id}`)}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-                    className="rounded-3xl border border-line bg-white px-5 py-4 shadow-sm shadow-brand/20"
-                  >
-                    <View className="flex-row items-center justify-between">
-                      <Text className="flex-1 text-base font-bold text-ink">
-                        {set.title}
-                      </Text>
-                      <View className="rounded-full bg-cream px-3 py-1">
-                        <Text className="text-xs font-bold text-berry">
-                          {set.wordCount}개
-                        </Text>
+                {group.sets.map((set) => {
+                  const status = statuses.get(set.id) ?? "not_started";
+                  return (
+                    <Pressable
+                      key={set.id}
+                      onPress={() => router.push(`/test/${set.id}`)}
+                      style={{
+                        backgroundColor: categoryColors.vocab.bg,
+                        borderWidth: 1,
+                        borderColor: categoryColors.vocab.border,
+                      }}
+                      className="rounded-3xl px-5 py-5 active:opacity-80"
+                    >
+                      <View className="flex-row items-center justify-between gap-3">
+                        <View className="flex-1 flex-row items-center gap-2">
+                          {set.week !== null && (
+                            <View
+                              className="rounded-full px-2.5 py-0.5"
+                              style={{
+                                backgroundColor: categoryColors.vocab.accent,
+                              }}
+                            >
+                              <Text
+                                className="text-sm font-bold"
+                                style={{ color: categoryColors.vocab.fg }}
+                              >
+                                {set.week}주차
+                              </Text>
+                            </View>
+                          )}
+                          <Text className="flex-1 text-lg font-bold text-ink">
+                            {set.title}
+                          </Text>
+                        </View>
+                        <StatusChip status={status} />
                       </View>
-                    </View>
-                    {set.description && (
-                      <Text className="mt-1 text-xs text-ink-soft">{set.description}</Text>
-                    )}
-                    {set.lastScore !== null && (
-                      <Text className="mt-1 text-xs text-ink-soft">
-                        최근 점수 {set.lastScore}점
+                      <Text className="mt-2 text-sm text-ink-soft">
+                        단어 {set.wordCount}개
+                        {set.lastScore !== null
+                          ? ` · 최근 점수 ${set.lastScore}점`
+                          : ""}
                       </Text>
-                    )}
-                    <Text className="mt-2 text-xs font-bold text-brand-dark">
-                      {set.lastScore !== null ? "다시 보기 ›" : "테스트 시작 ›"}
-                    </Text>
-                  </Pressable>
-                ))}
+                      <Text
+                        className="mt-2 text-sm font-bold"
+                        style={{ color: categoryColors.vocab.fg }}
+                      >
+                        {status === "completed"
+                          ? "다시 보기 ›"
+                          : status === "in_progress"
+                            ? "이어서 하기 ›"
+                            : "시작하기 ›"}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
           ))}

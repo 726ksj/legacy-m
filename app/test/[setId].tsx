@@ -10,7 +10,8 @@ import {
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../lib/supabase";
-import { brandGradient, colors } from "../../lib/theme";
+import { Ionicons } from "@expo/vector-icons";
+import { brandGradient, categoryColors, colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 import {
   friendlyTestError,
@@ -18,6 +19,7 @@ import {
   RETEST_DESCRIPTION,
   ROUND_TITLE,
   startAttempt,
+  startLabel,
   type TestRound,
   type TestStatus,
 } from "../../lib/test";
@@ -49,10 +51,10 @@ function RoundCard({
   return (
     <View className="flex-row items-center justify-between rounded-3xl border border-line bg-white px-5 py-4 shadow-sm shadow-brand/20">
       <View className="flex-1 pr-3">
-        <Text className="text-base font-bold text-ink">
+        <Text className="text-lg font-bold text-ink">
           {ROUND_TITLE[roundNo]}
         </Text>
-        <Text className="mt-1 text-xs text-ink-soft">
+        <Text className="mt-1 text-sm text-ink-soft">
           {round
             ? `${round.correct_count ?? 0} / ${round.total_count} 정답`
             : skipped
@@ -61,7 +63,7 @@ function RoundCard({
         </Text>
       </View>
       <View className={`rounded-full px-3 py-1 ${badgeBg}`}>
-        <Text className={`text-xs font-bold ${badgeText}`}>{badge}</Text>
+        <Text className={`text-sm font-bold ${badgeText}`}>{badge}</Text>
       </View>
     </View>
   );
@@ -143,13 +145,11 @@ export default function TestOverviewScreen() {
   };
 
   const primaryLabel = inProgress
-    ? `${inProgress.round_no}회 이어서 풀기`
+    ? `${ROUND_TITLE[inProgress.round_no]} 이어서 풀기`
     : status?.next_round
       ? status.rounds.length === 0
         ? "테스트 시작"
-        : RETEST_DESCRIPTION[status.next_round]
-          ? `틀린 단어 다시 풀기 (${status.next_round}회)`
-          : `${status.next_round}회 시작`
+        : startLabel(status.next_round)
       : "";
 
   return (
@@ -172,18 +172,29 @@ export default function TestOverviewScreen() {
           }
         >
           <View>
-            <Text className="text-xl font-extrabold text-ink">
+            <Text className="text-2xl font-extrabold text-ink">
               {title || "단어장"}
             </Text>
-            <Text className="mt-1 text-xs text-ink-soft">
-              4지선다 · 답을 고르면 바로 확정되고 수정할 수 없어요
+            <Text className="mt-1 text-sm text-ink-soft">
+              4지선다 · 보기를 고른 뒤 확인을 누르면 확정되고 수정할 수 없어요
             </Text>
           </View>
 
           {error && (
             <View className="rounded-xl bg-red-50 px-4 py-3">
-              <Text className="text-sm font-semibold text-red-500">
+              <Text className="text-base font-semibold text-red-500">
                 {error}
+              </Text>
+            </View>
+          )}
+
+          {status?.is_late && (
+            <View className="rounded-xl bg-amber-50 px-4 py-3">
+              <Text className="text-base font-bold text-amber-700">
+                지각 응시
+              </Text>
+              <Text className="mt-0.5 text-sm text-amber-700">
+                지난 주차 시험이에요. 지금 응시하면 지각 응시로 기록돼요.
               </Text>
             </View>
           )}
@@ -191,7 +202,7 @@ export default function TestOverviewScreen() {
           {status && (
             <>
               <View className="gap-3">
-                {/* 1~3회는 항상 보이고, 4·5회는 진행됐거나 다음 차례일 때만 보인다. */}
+                {/* 1차 시험·1차 재시험·2차 시험은 항상 보이고, 2차·3차 재시험은 진행됐거나 다음 차례일 때만 보인다. */}
                 {[1, 2, 3, 4, 5]
                   .filter(
                     (roundNo) =>
@@ -224,18 +235,40 @@ export default function TestOverviewScreen() {
                     paddingVertical: 22,
                   }}
                 >
-                  <Text className="text-xs font-bold text-cream">
+                  <Text className="text-sm font-bold text-cream">
                     {allDone ? "테스트 완료" : "종합 점수"}
                   </Text>
-                  <Text className="mt-1 text-3xl font-extrabold text-white">
+                  <Text className="mt-1 text-4xl font-extrabold text-white">
                     종합 {status.total_score}점
                   </Text>
-                  <Text className="mt-2 text-xs text-white/80">
-                    1회 {status.first_score}점 × 40% + 최종 {status.final_score}
-                    점 × 60%
+                  <Text className="mt-2 text-sm text-white/80">
+                    1차 시험 {status.first_score}점 × 40% + 2차 시험{" "}
+                    {status.final_score}점 × 60%
                   </Text>
                 </LinearGradient>
               )}
+
+              <Pressable
+                onPress={() => router.push(`/memorize/${setId}`)}
+                style={{
+                  backgroundColor: categoryColors.vocab.bg,
+                  borderWidth: 1,
+                  borderColor: categoryColors.vocab.border,
+                }}
+                className="flex-row items-center justify-center gap-2 rounded-2xl py-4 active:opacity-80"
+              >
+                <Ionicons
+                  name="albums-outline"
+                  size={20}
+                  color={categoryColors.vocab.fg}
+                />
+                <Text
+                  className="text-lg font-bold"
+                  style={{ color: categoryColors.vocab.fg }}
+                >
+                  단어 암기하기
+                </Text>
+              </Pressable>
 
               {!allDone && (
                 <Pressable
@@ -249,7 +282,7 @@ export default function TestOverviewScreen() {
                   {starting ? (
                     <ActivityIndicator color="#ffffff" />
                   ) : (
-                    <Text className="text-base font-bold text-white">
+                    <Text className="text-lg font-bold text-white">
                       {primaryLabel}
                     </Text>
                   )}

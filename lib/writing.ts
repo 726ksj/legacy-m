@@ -138,6 +138,8 @@ export interface WritingProgress {
   max_points: number;
   first_try_rate: number | null;
   passed: boolean;
+  // 지난 주차 시험을 늦게 응시하는 경우(지각 응시).
+  is_late: boolean;
 }
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {

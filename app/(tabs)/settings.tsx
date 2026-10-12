@@ -63,8 +63,8 @@ export default function SettingsScreen() {
       <ScreenHeader title="설정" />
       <View className="px-6">
         <View className="mt-6 rounded-3xl border border-line bg-white px-5 py-5 shadow-sm shadow-brand/20">
-          <Text className="text-base font-bold text-ink">{name ?? "회원"}</Text>
-          {username && <Text className="mt-1 text-sm text-ink-soft">@{username}</Text>}
+          <Text className="text-lg font-bold text-ink">{name ?? "회원"}</Text>
+          {username && <Text className="mt-1 text-base text-ink-soft">@{username}</Text>}
         </View>
 
         <Pressable
@@ -72,7 +72,7 @@ export default function SettingsScreen() {
           style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
           className="mt-8 items-center rounded-2xl border border-line bg-white py-4"
         >
-          <Text className="text-sm font-bold text-red-500">로그아웃</Text>
+          <Text className="text-base font-bold text-red-500">로그아웃</Text>
         </Pressable>
       </View>
     </View>

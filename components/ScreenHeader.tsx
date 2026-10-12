@@ -60,7 +60,7 @@ export default function ScreenHeader({
           </View>
           <Text
             numberOfLines={1}
-            className="flex-1 text-center text-lg font-extrabold tracking-wide text-white"
+            className="flex-1 text-center text-xl font-extrabold tracking-wide text-white"
           >
             {title}
           </Text>

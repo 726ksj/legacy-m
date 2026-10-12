@@ -51,7 +51,7 @@ function ChunkChips({
             className={`rounded-xl px-3 py-1.5 ${isKey ? "bg-brand" : "bg-blush"}`}
           >
             <Text
-              className={`text-sm font-semibold ${isKey ? "text-white" : "text-ink-soft"}`}
+              className={`text-base font-semibold ${isKey ? "text-white" : "text-ink-soft"}`}
             >
               {chunk}
             </Text>
@@ -83,7 +83,7 @@ function PrimaryButton({
       {loading ? (
         <ActivityIndicator color="#ffffff" />
       ) : (
-        <Text className="text-base font-bold text-white">{label}</Text>
+        <Text className="text-lg font-bold text-white">{label}</Text>
       )}
     </Pressable>
   );
@@ -105,7 +105,7 @@ function SecondaryButton({
       style={{ opacity: disabled ? 0.4 : 1 }}
       className="flex-1 items-center rounded-2xl border border-line bg-white py-4"
     >
-      <Text className="text-base font-bold text-ink-soft">{label}</Text>
+      <Text className="text-lg font-bold text-ink-soft">{label}</Text>
     </Pressable>
   );
 }
@@ -228,7 +228,7 @@ export default function WritingStudyScreen() {
         right={
           showCounter ? (
             <View className="rounded-full bg-white/25 px-2.5 py-1">
-              <Text className="text-xs font-bold text-white">
+              <Text className="text-sm font-bold text-white">
                 {index + 1} / {sentences.length}
               </Text>
             </View>
@@ -242,17 +242,28 @@ export default function WritingStudyScreen() {
         </View>
       ) : !sentence ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-sm font-semibold text-red-500">
+          <Text className="text-center text-base font-semibold text-red-500">
             {error ?? "등록된 문장이 없어요."}
           </Text>
         </View>
       ) : (
         <ScrollView contentContainerClassName="px-6 py-6 gap-5">
-          <Text className="text-sm font-bold text-ink-soft">{title}</Text>
+          <Text className="text-base font-bold text-ink-soft">{title}</Text>
+
+          {progress?.is_late && (
+            <View className="rounded-xl bg-amber-50 px-4 py-3">
+              <Text className="text-base font-bold text-amber-700">
+                지각 응시
+              </Text>
+              <Text className="mt-0.5 text-sm text-amber-700">
+                지난 주차 시험이에요. 지금 응시하면 지각 응시로 기록돼요.
+              </Text>
+            </View>
+          )}
 
           {error && (
             <View className="rounded-xl bg-red-50 px-4 py-3">
-              <Text className="text-sm font-semibold text-red-500">
+              <Text className="text-base font-semibold text-red-500">
                 {error}
               </Text>
             </View>
@@ -263,26 +274,26 @@ export default function WritingStudyScreen() {
               <View className="rounded-3xl border border-line bg-white px-6 py-8 shadow-sm shadow-brand/20">
                 <View className="flex-row items-center justify-between">
                   <View className="self-start rounded-full bg-cream px-3 py-1">
-                    <Text className="text-xs font-bold text-berry">우리말</Text>
+                    <Text className="text-sm font-bold text-berry">우리말</Text>
                   </View>
                   {sentenceProgress?.completed && (
                     <View className="rounded-full bg-emerald-50 px-2.5 py-1">
-                      <Text className="text-xs font-bold text-emerald-600">
+                      <Text className="text-sm font-bold text-emerald-600">
                         완성 · {sentenceProgress.points}점
                       </Text>
                     </View>
                   )}
                 </View>
-                <Text className="mt-3 text-xl font-bold leading-8 text-ink">
+                <Text className="mt-3 text-2xl font-bold leading-8 text-ink">
                   {sentence.korean}
                 </Text>
 
                 <View className="mt-6 self-start rounded-full bg-blush px-3 py-1">
-                  <Text className="text-xs font-bold text-brand-dark">
+                  <Text className="text-sm font-bold text-brand-dark">
                     영어 문장
                   </Text>
                 </View>
-                <Text className="mt-3 text-2xl font-extrabold leading-9 text-ink">
+                <Text className="mt-3 text-3xl font-extrabold leading-9 text-ink">
                   {sentence.english}
                 </Text>
                 <View className="mt-5">
@@ -305,7 +316,7 @@ export default function WritingStudyScreen() {
                   loading={busy}
                 />
               </View>
-              <Text className="text-center text-xs text-ink-soft">
+              <Text className="text-center text-sm text-ink-soft">
                 문장을 충분히 익혔다면 영어 정답을 가리고 배열해 보세요
               </Text>
             </>
@@ -316,23 +327,23 @@ export default function WritingStudyScreen() {
               <View className="rounded-3xl border border-line bg-white px-6 py-6 shadow-sm shadow-brand/20">
                 <View className="flex-row items-center justify-between">
                   <View className="self-start rounded-full bg-cream px-3 py-1">
-                    <Text className="text-xs font-bold text-berry">우리말</Text>
+                    <Text className="text-sm font-bold text-berry">우리말</Text>
                   </View>
-                  <Text className="text-xs font-semibold text-ink-soft">
+                  <Text className="text-sm font-semibold text-ink-soft">
                     {attempt.attempt_no}번째 시도
                   </Text>
                 </View>
-                <Text className="mt-3 text-xl font-bold leading-8 text-ink">
+                <Text className="mt-3 text-2xl font-bold leading-8 text-ink">
                   {attempt.korean}
                 </Text>
               </View>
 
               <View className="min-h-[88px] rounded-3xl border-2 border-dashed border-brand/40 bg-white px-4 py-4">
-                <Text className="mb-2 text-xs font-bold text-ink-soft">
+                <Text className="mb-2 text-sm font-bold text-ink-soft">
                   내 답안
                 </Text>
                 {selectedIds.length === 0 ? (
-                  <Text className="text-sm text-ink-soft">
+                  <Text className="text-base text-ink-soft">
                     아래 단어를 눌러 문장을 만들어요
                   </Text>
                 ) : (
@@ -347,7 +358,7 @@ export default function WritingStudyScreen() {
                           }
                           className="rounded-xl bg-brand px-3 py-2"
                         >
-                          <Text className="text-base font-semibold text-white">
+                          <Text className="text-lg font-semibold text-white">
                             {piece?.text}
                           </Text>
                         </Pressable>
@@ -358,7 +369,7 @@ export default function WritingStudyScreen() {
               </View>
 
               <View>
-                <Text className="mb-2 text-xs font-bold text-ink-soft">
+                <Text className="mb-2 text-sm font-bold text-ink-soft">
                   단어 목록
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
@@ -372,7 +383,7 @@ export default function WritingStudyScreen() {
                         }
                         className="rounded-xl border border-line bg-white px-3 py-2"
                       >
-                        <Text className="text-base font-semibold text-ink">
+                        <Text className="text-lg font-semibold text-ink">
                           {piece.text}
                         </Text>
                       </Pressable>
@@ -380,18 +391,27 @@ export default function WritingStudyScreen() {
                 </View>
               </View>
 
-              <View className="flex-row gap-3">
-                <SecondaryButton
-                  label="처음부터"
-                  disabled={selectedIds.length === 0}
-                  onPress={() => setSelectedIds([])}
-                />
-                <PrimaryButton
-                  label="정답 확인"
-                  disabled={selectedIds.length !== attempt.pieces.length}
-                  loading={busy}
-                  onPress={submit}
-                />
+              <View className="gap-3">
+                <View className="flex-row gap-3">
+                  <SecondaryButton
+                    label="단어 취소"
+                    disabled={selectedIds.length === 0}
+                    onPress={() => setSelectedIds((ids) => ids.slice(0, -1))}
+                  />
+                  <SecondaryButton
+                    label="처음부터"
+                    disabled={selectedIds.length === 0}
+                    onPress={() => setSelectedIds([])}
+                  />
+                </View>
+                <View className="flex-row">
+                  <PrimaryButton
+                    label="정답 확인"
+                    disabled={selectedIds.length !== attempt.pieces.length}
+                    loading={busy}
+                    onPress={submit}
+                  />
+                </View>
               </View>
             </>
           )}
@@ -414,7 +434,7 @@ export default function WritingStudyScreen() {
                     color={result.is_correct ? "#059669" : "#ef4444"}
                   />
                   <Text
-                    className={`text-xl font-extrabold ${
+                    className={`text-2xl font-extrabold ${
                       result.is_correct ? "text-emerald-700" : "text-red-600"
                     }`}
                   >
@@ -424,7 +444,7 @@ export default function WritingStudyScreen() {
                   </Text>
                 </View>
                 {result.is_correct && result.sentence_completed && (
-                  <Text className="mt-2 text-sm font-semibold text-emerald-700">
+                  <Text className="mt-2 text-base font-semibold text-emerald-700">
                     {result.attempt_no === 1
                       ? "첫 시도에 맞혔어요"
                       : `${result.attempt_no}번째 시도에 맞혔어요`}{" "}
@@ -432,12 +452,12 @@ export default function WritingStudyScreen() {
                   </Text>
                 )}
                 {result.is_correct && result.was_already_completed && (
-                  <Text className="mt-2 text-sm text-ink-soft">
+                  <Text className="mt-2 text-base text-ink-soft">
                     이미 완성한 문장이라 점수는 그대로예요
                   </Text>
                 )}
                 {!result.is_correct && result.order_accuracy !== undefined && (
-                  <Text className="mt-2 text-sm text-ink-soft">
+                  <Text className="mt-2 text-base text-ink-soft">
                     어순 정확도 {Math.round(result.order_accuracy * 100)}%
                   </Text>
                 )}
@@ -445,10 +465,10 @@ export default function WritingStudyScreen() {
 
               {!result.is_correct && result.submitted_chunks && (
                 <View className="rounded-3xl border border-line bg-white px-5 py-5">
-                  <Text className="mb-2 text-xs font-bold text-ink-soft">
+                  <Text className="mb-2 text-sm font-bold text-ink-soft">
                     내 답안
                   </Text>
-                  <Text className="text-base text-red-600">
+                  <Text className="text-lg text-red-600">
                     {result.submitted_chunks.join(" ")}
                   </Text>
                 </View>
@@ -456,17 +476,17 @@ export default function WritingStudyScreen() {
 
               <View className="rounded-3xl border border-line bg-white px-6 py-6 shadow-sm shadow-brand/20">
                 <View className="self-start rounded-full bg-cream px-3 py-1">
-                  <Text className="text-xs font-bold text-berry">우리말</Text>
+                  <Text className="text-sm font-bold text-berry">우리말</Text>
                 </View>
-                <Text className="mt-3 text-lg font-bold leading-7 text-ink">
+                <Text className="mt-3 text-xl font-bold leading-7 text-ink">
                   {result.korean}
                 </Text>
                 <View className="mt-5 self-start rounded-full bg-blush px-3 py-1">
-                  <Text className="text-xs font-bold text-brand-dark">
+                  <Text className="text-sm font-bold text-brand-dark">
                     정답
                   </Text>
                 </View>
-                <Text className="mt-3 text-2xl font-extrabold leading-9 text-ink">
+                <Text className="mt-3 text-3xl font-extrabold leading-9 text-ink">
                   {result.english}
                 </Text>
                 <View className="mt-4">
@@ -504,13 +524,13 @@ export default function WritingStudyScreen() {
                   paddingVertical: 24,
                 }}
               >
-                <Text className="text-xs font-bold text-cream">
+                <Text className="text-sm font-bold text-cream">
                   {progress.passed ? "서술형 통과" : "진행 중"}
                 </Text>
-                <Text className="mt-1 text-4xl font-extrabold text-white">
+                <Text className="mt-1 text-5xl font-extrabold text-white">
                   {progress.points} / {progress.max_points}점
                 </Text>
-                <Text className="mt-2 text-sm text-white/90">
+                <Text className="mt-2 text-base text-white/90">
                   완성 {progress.completed}/{progress.total}문장
                   {progress.first_try_rate !== null &&
                     ` · 첫 시도 정답률 ${progress.first_try_rate}%`}
@@ -518,7 +538,7 @@ export default function WritingStudyScreen() {
               </LinearGradient>
 
               <View className="gap-3">
-                <Text className="text-sm font-bold text-ink-soft">
+                <Text className="text-base font-bold text-ink-soft">
                   문장별 결과
                 </Text>
                 {progress.sentences.map((item) => (
@@ -527,11 +547,11 @@ export default function WritingStudyScreen() {
                     className="flex-row items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4 py-3"
                   >
                     <View className="flex-1">
-                      <Text className="text-xs font-bold text-ink-soft">
+                      <Text className="text-sm font-bold text-ink-soft">
                         {item.order_no}번
                       </Text>
                       <Text
-                        className="mt-0.5 text-sm text-ink"
+                        className="mt-0.5 text-base text-ink"
                         numberOfLines={2}
                       >
                         {item.korean}
@@ -539,7 +559,7 @@ export default function WritingStudyScreen() {
                     </View>
                     {item.completed ? (
                       <View className="rounded-full bg-emerald-50 px-2.5 py-1">
-                        <Text className="text-xs font-bold text-emerald-600">
+                        <Text className="text-sm font-bold text-emerald-600">
                           +{item.points}점
                         </Text>
                       </View>
@@ -548,7 +568,7 @@ export default function WritingStudyScreen() {
                         onPress={() => jumpTo(item.sentence_id)}
                         className="rounded-full bg-brand px-3 py-1.5"
                       >
-                        <Text className="text-xs font-bold text-white">
+                        <Text className="text-sm font-bold text-white">
                           다시 풀기
                         </Text>
                       </Pressable>

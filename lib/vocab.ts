@@ -5,6 +5,7 @@ export interface VocabSet {
   title: string;
   description: string | null;
   created_at: string;
+  week: number | null;
 }
 
 export interface Course {
@@ -42,7 +43,7 @@ export async function fetchVocabOverview(): Promise<VocabOverview> {
   const { data: assignmentRows } = await supabase
     .from("vocab_assignments")
     .select(
-      "assigned_at, vocab_sets(id, title, description, created_at), courses(id, subject, title, teacher_name)",
+      "assigned_at, vocab_sets(id, title, description, created_at, week), courses(id, subject, title, teacher_name)",
     )
     .order("assigned_at", { ascending: false })
     .returns<AssignmentRow[]>();
@@ -52,7 +53,10 @@ export async function fetchVocabOverview(): Promise<VocabOverview> {
 
   const [{ data: wordRows }, { data: resultRows }] = await Promise.all([
     setIds.length
-      ? supabase.from("vocab_words").select("vocab_set_id").in("vocab_set_id", setIds)
+      ? supabase
+          .from("vocab_words")
+          .select("vocab_set_id")
+          .in("vocab_set_id", setIds)
       : Promise.resolve({ data: [] as { vocab_set_id: string }[] }),
     setIds.length
       ? supabase
@@ -61,19 +65,32 @@ export async function fetchVocabOverview(): Promise<VocabOverview> {
           .in("vocab_set_id", setIds)
           .order("tested_at", { ascending: false })
       : Promise.resolve({
-          data: [] as { vocab_set_id: string; score: number; tested_at: string }[],
+          data: [] as {
+            vocab_set_id: string;
+            score: number;
+            tested_at: string;
+          }[],
         }),
   ]);
 
   const wordCountBySet = new Map<string, number>();
   for (const row of wordRows ?? []) {
-    wordCountBySet.set(row.vocab_set_id, (wordCountBySet.get(row.vocab_set_id) ?? 0) + 1);
+    wordCountBySet.set(
+      row.vocab_set_id,
+      (wordCountBySet.get(row.vocab_set_id) ?? 0) + 1,
+    );
   }
 
-  const lastResultBySet = new Map<string, { score: number; tested_at: string }>();
+  const lastResultBySet = new Map<
+    string,
+    { score: number; tested_at: string }
+  >();
   for (const row of resultRows ?? []) {
     if (!lastResultBySet.has(row.vocab_set_id)) {
-      lastResultBySet.set(row.vocab_set_id, { score: row.score, tested_at: row.tested_at });
+      lastResultBySet.set(row.vocab_set_id, {
+        score: row.score,
+        tested_at: row.tested_at,
+      });
     }
   }
 
@@ -82,7 +99,9 @@ export async function fetchVocabOverview(): Promise<VocabOverview> {
     const set = row.vocab_sets!;
     const course = row.courses;
     const key = course ? course.id : "personal";
-    const label = course ? `[${course.subject}] ${course.title}` : "개인 배정 단어장";
+    const label = course
+      ? `[${course.subject}] ${course.title}`
+      : "개인 배정 단어장";
     const lastResult = lastResultBySet.get(set.id);
 
     if (!groupMap.has(key)) {
@@ -94,6 +113,15 @@ export async function fetchVocabOverview(): Promise<VocabOverview> {
       lastScore: lastResult?.score ?? null,
       lastTestedAt: lastResult?.tested_at ?? null,
     });
+  }
+
+  // 같은 강좌 안에서는 주차 순(주차 미지정은 뒤), 같은 주차에서는 등록 순.
+  for (const group of groupMap.values()) {
+    group.sets.sort(
+      (a, b) =>
+        (a.week ?? 99) - (b.week ?? 99) ||
+        a.created_at.localeCompare(b.created_at),
+    );
   }
 
   return {

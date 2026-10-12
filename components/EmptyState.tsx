@@ -16,9 +16,9 @@ export default function EmptyState({
       <View className="h-20 w-20 items-center justify-center rounded-full bg-cream">
         <Ionicons name={icon} size={38} color="#90243b" />
       </View>
-      <Text className="mt-4 text-base font-bold text-ink">{title}</Text>
+      <Text className="mt-4 text-lg font-bold text-ink">{title}</Text>
       {description && (
-        <Text className="mt-1.5 text-center text-sm text-ink-soft">
+        <Text className="mt-1.5 text-center text-base text-ink-soft">
           {description}
         </Text>
       )}

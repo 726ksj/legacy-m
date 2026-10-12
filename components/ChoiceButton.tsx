@@ -13,23 +13,32 @@ export default function ChoiceButton({
   text,
   question,
   disabled,
+  pending = false,
   onPress,
 }: {
   index: number;
   text: string;
   question: ChoiceQuestion;
   disabled: boolean;
+  // 아직 확정하지 않고 눌러 둔(선택 중인) 보기.
+  pending?: boolean;
   onPress: () => void;
 }) {
   const answered = question.selected_index !== null;
   const isCorrectChoice = answered && question.correct_index === index;
-  const isWrongSelection = answered && question.selected_index === index && !question.is_correct;
+  const isWrongSelection =
+    answered && question.selected_index === index && !question.is_correct;
 
   let containerClass = "border-line bg-white";
   let textClass = "text-ink";
   let numberBg = "bg-blush";
   let numberText = "text-berry";
-  if (isCorrectChoice) {
+  if (!answered && pending) {
+    containerClass = "border-brand bg-blush";
+    textClass = "text-berry font-bold";
+    numberBg = "bg-brand";
+    numberText = "text-white";
+  } else if (isCorrectChoice) {
     containerClass = "border-emerald-500 bg-emerald-50";
     textClass = "text-emerald-700";
     numberBg = "bg-emerald-500";
@@ -51,12 +60,18 @@ export default function ChoiceButton({
       style={({ pressed }) => ({ opacity: pressed && !answered ? 0.8 : 1 })}
       className={`flex-row items-center rounded-2xl border-2 px-4 py-4 ${containerClass}`}
     >
-      <View className={`mr-3 h-7 w-7 items-center justify-center rounded-full ${numberBg}`}>
-        <Text className={`text-sm font-bold ${numberText}`}>{index + 1}</Text>
+      <View
+        className={`mr-3 h-7 w-7 items-center justify-center rounded-full ${numberBg}`}
+      >
+        <Text className={`text-base font-bold ${numberText}`}>{index + 1}</Text>
       </View>
-      <Text className={`flex-1 text-base ${textClass}`}>{text}</Text>
-      {isCorrectChoice && <Text className="text-xs font-bold text-emerald-600">정답</Text>}
-      {isWrongSelection && <Text className="text-xs font-bold text-red-500">오답</Text>}
+      <Text className={`flex-1 text-lg ${textClass}`}>{text}</Text>
+      {isCorrectChoice && (
+        <Text className="text-sm font-bold text-emerald-600">정답</Text>
+      )}
+      {isWrongSelection && (
+        <Text className="text-sm font-bold text-red-500">오답</Text>
+      )}
     </Pressable>
   );
 }

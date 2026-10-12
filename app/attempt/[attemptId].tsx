@@ -10,6 +10,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../lib/supabase";
 import { brandGradient, colors } from "../../lib/theme";
+import AnswerActions from "../../components/AnswerActions";
 import ChoiceButton from "../../components/ChoiceButton";
 import ScreenHeader from "../../components/ScreenHeader";
 import {
@@ -17,9 +18,9 @@ import {
   friendlyTestError,
   getAttempt,
   getTestStatus,
-  RETEST_DESCRIPTION,
   ROUND_TITLE,
   startAttempt,
+  startLabel,
   type Attempt,
   type TestStatus,
 } from "../../lib/test";
@@ -64,13 +65,13 @@ function ResultView({ attempt }: { attempt: Attempt }) {
         end={{ x: 1, y: 1 }}
         style={{ borderRadius: 28, paddingHorizontal: 22, paddingVertical: 24 }}
       >
-        <Text className="text-xs font-bold text-cream">
+        <Text className="text-sm font-bold text-cream">
           {ROUND_TITLE[attempt.round_no]}
         </Text>
-        <Text className="mt-1 text-5xl font-extrabold text-white">
+        <Text className="mt-1 text-6xl font-extrabold text-white">
           {attempt.score}점
         </Text>
-        <Text className="mt-2 text-sm text-white/90">
+        <Text className="mt-2 text-base text-white/90">
           {attempt.total_count}문제 중 {attempt.correct_count}개 정답 · 오답{" "}
           {wrongQuestions.length}개
         </Text>
@@ -78,34 +79,35 @@ function ResultView({ attempt }: { attempt: Attempt }) {
 
       {status?.total_score !== null && status?.total_score !== undefined && (
         <View className="rounded-3xl border border-line bg-cream/40 px-5 py-4">
-          <Text className="text-xs font-bold text-berry">최종 결과</Text>
-          <Text className="mt-1 text-2xl font-extrabold text-ink">
+          <Text className="text-sm font-bold text-berry">최종 결과</Text>
+          <Text className="mt-1 text-3xl font-extrabold text-ink">
             종합 {status.total_score}점
           </Text>
-          <Text className="mt-1 text-xs text-ink-soft">
-            1회 {status.first_score}점 × 40% + 최종 {status.final_score}점 × 60%
+          <Text className="mt-1 text-sm text-ink-soft">
+            1차 시험 {status.first_score}점 × 40% + 2차 시험{" "}
+            {status.final_score}점 × 60%
           </Text>
         </View>
       )}
 
       {wrongQuestions.length > 0 && (
         <View className="gap-3">
-          <Text className="text-sm font-bold text-ink-soft">틀린 단어</Text>
+          <Text className="text-base font-bold text-ink-soft">틀린 단어</Text>
           {wrongQuestions.map((question) => (
             <View
               key={question.position}
               className="rounded-2xl border border-line bg-white px-4 py-3"
             >
-              <Text className="text-base font-bold text-ink">
+              <Text className="text-lg font-bold text-ink">
                 {question.word}
               </Text>
-              <Text className="mt-1 text-sm text-emerald-700">
+              <Text className="mt-1 text-base text-emerald-700">
                 {question.correct_index !== null
                   ? question.choices[question.correct_index]
                   : ""}
               </Text>
               {question.example && (
-                <Text className="mt-1 text-xs text-ink-soft">
+                <Text className="mt-1 text-sm text-ink-soft">
                   {question.example}
                 </Text>
               )}
@@ -116,7 +118,7 @@ function ResultView({ attempt }: { attempt: Attempt }) {
 
       {error && (
         <View className="rounded-xl bg-red-50 px-4 py-3">
-          <Text className="text-sm font-semibold text-red-500">{error}</Text>
+          <Text className="text-base font-semibold text-red-500">{error}</Text>
         </View>
       )}
 
@@ -133,10 +135,8 @@ function ResultView({ attempt }: { attempt: Attempt }) {
             {starting ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text className="text-base font-bold text-white">
-                {RETEST_DESCRIPTION[nextRound]
-                  ? `틀린 단어 다시 풀기 (${nextRound}회)`
-                  : `${nextRound}회 시작`}
+              <Text className="text-lg font-bold text-white">
+                {startLabel(nextRound)}
               </Text>
             )}
           </Pressable>
@@ -145,7 +145,7 @@ function ResultView({ attempt }: { attempt: Attempt }) {
           onPress={() => router.replace(`/test/${attempt.vocab_set_id}`)}
           className="items-center rounded-2xl border border-line bg-white py-4"
         >
-          <Text className="text-base font-bold text-ink-soft">
+          <Text className="text-lg font-bold text-ink-soft">
             {nextRound === null ? "완료" : "나중에 하기"}
           </Text>
         </Pressable>
@@ -161,6 +161,8 @@ export default function AttemptScreen() {
   const [showResult, setShowResult] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // 보기를 눌러 둔(아직 확정하지 않은) 번호. 확인을 눌러야 답이 확정된다.
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -193,14 +195,22 @@ export default function AttemptScreen() {
   const answered =
     question?.selected_index !== null && question?.selected_index !== undefined;
 
-  const onChoose = async (index: number) => {
-    if (!attempt || !question || answered || submitting) return;
+  const onConfirm = async () => {
+    if (
+      !attempt ||
+      !question ||
+      answered ||
+      submitting ||
+      pendingIndex === null
+    )
+      return;
     setSubmitting(true);
     setError(null);
     try {
-      await answerQuestion(attempt.id, question.position, index);
+      await answerQuestion(attempt.id, question.position, pendingIndex);
       // 서버가 확정한 정답/예시 문장을 다시 받아 화면에 반영한다.
       setAttempt(await getAttempt(attempt.id));
+      setPendingIndex(null);
     } catch (e) {
       setError(friendlyTestError(e));
     } finally {
@@ -210,6 +220,7 @@ export default function AttemptScreen() {
 
   const onNext = () => {
     if (!attempt) return;
+    setPendingIndex(null);
     if (attempt.status === "completed") {
       setShowResult(true);
       return;
@@ -227,7 +238,7 @@ export default function AttemptScreen() {
         right={
           attempt && !showResult ? (
             <View className="rounded-full bg-white/25 px-2.5 py-1">
-              <Text className="text-xs font-bold text-white">
+              <Text className="text-sm font-bold text-white">
                 {question?.position ?? attempt.total_count} /{" "}
                 {attempt.total_count}
               </Text>
@@ -242,7 +253,7 @@ export default function AttemptScreen() {
         </View>
       ) : !attempt ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-sm font-semibold text-red-500">
+          <Text className="text-center text-base font-semibold text-red-500">
             {error ?? "테스트를 불러오지 못했어요."}
           </Text>
         </View>
@@ -264,11 +275,11 @@ export default function AttemptScreen() {
 
             <View className="items-center rounded-3xl border border-line bg-white px-4 py-10 shadow-sm shadow-brand/20">
               <View className="rounded-full bg-cream px-3 py-1">
-                <Text className="text-xs font-bold text-berry">
+                <Text className="text-sm font-bold text-berry">
                   이 단어의 뜻은?
                 </Text>
               </View>
-              <Text className="mt-4 text-center text-3xl font-extrabold text-ink">
+              <Text className="mt-4 text-center text-4xl font-extrabold text-ink">
                 {question.word}
               </Text>
             </View>
@@ -281,15 +292,16 @@ export default function AttemptScreen() {
                   text={text}
                   question={question}
                   disabled={answered || submitting}
-                  onPress={() => onChoose(index)}
+                  pending={pendingIndex === index}
+                  onPress={() => setPendingIndex(index)}
                 />
               ))}
             </View>
 
             {answered && question.example && (
               <View className="rounded-2xl bg-cream/40 px-4 py-3">
-                <Text className="text-xs font-bold text-berry">예시 문장</Text>
-                <Text className="mt-1 text-sm text-ink">
+                <Text className="text-sm font-bold text-berry">예시 문장</Text>
+                <Text className="mt-1 text-base text-ink">
                   {question.example}
                 </Text>
               </View>
@@ -297,22 +309,23 @@ export default function AttemptScreen() {
 
             {error && (
               <View className="rounded-xl bg-red-50 px-4 py-3">
-                <Text className="text-sm font-semibold text-red-500">
+                <Text className="text-base font-semibold text-red-500">
                   {error}
                 </Text>
               </View>
             )}
 
-            <Pressable
-              onPress={onNext}
-              disabled={!answered}
-              style={{ opacity: answered ? 1 : 0.4 }}
-              className="items-center rounded-2xl bg-brand py-4 shadow-md shadow-brand/40"
-            >
-              <Text className="text-base font-bold text-white">
-                {attempt.status === "completed" ? "결과 보기" : "다음 문제"}
-              </Text>
-            </Pressable>
+            <AnswerActions
+              answered={answered}
+              hasSelection={pendingIndex !== null}
+              submitting={submitting}
+              onCancel={() => setPendingIndex(null)}
+              onConfirm={onConfirm}
+              onNext={onNext}
+              nextLabel={
+                attempt.status === "completed" ? "결과 보기" : "다음 문제"
+              }
+            />
           </ScrollView>
         )
       )}
