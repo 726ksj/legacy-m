@@ -54,3 +54,20 @@ export async function fetchWritingProgress(): Promise<
   }
   return progress;
 }
+
+export interface WritingOverview {
+  total: number;
+  done: number;
+}
+
+// 어순 배열 전체 진행: 수강 중인 강좌의 세트 수와 모든 문장을 완성한 세트 수.
+// (숨긴 세트와 수강하지 않는 강좌의 세트는 RLS가 걸러준다)
+export async function fetchWritingOverview(): Promise<WritingOverview> {
+  const [{ count: total }, { count: done }] = await Promise.all([
+    supabase.from("writing_sets").select("id", { count: "exact", head: true }),
+    supabase
+      .from("writing_set_completions")
+      .select("writing_set_id", { count: "exact", head: true }),
+  ]);
+  return { total: total ?? 0, done: done ?? 0 };
+}

@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { fetchVocabOverview } from "../../lib/vocab";
+import { fetchWritingOverview } from "../../lib/progress";
 import {
   fetchWeeklyCourses,
   summarizeWeekly,
@@ -31,6 +32,8 @@ export default function HomeScreen() {
   // 학습 유형 카드(단어 학습 n/m개 완료)에 쓰는 전체 단어장 현황.
   const [totalSets, setTotalSets] = useState(0);
   const [testedSetCount, setTestedSetCount] = useState(0);
+  const [writingTotal, setWritingTotal] = useState(0);
+  const [writingDone, setWritingDone] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -43,7 +46,7 @@ export default function HomeScreen() {
       return;
     }
 
-    const [{ data: profile }, courses, overview] = await Promise.all([
+    const [{ data: profile }, courses, overview, writing] = await Promise.all([
       supabase
         .from("profiles")
         .select("name")
@@ -52,12 +55,15 @@ export default function HomeScreen() {
       // 이번 주 요약을 못 불러와도 홈 화면 전체가 멈추지 않게 빈 목록으로 대체한다.
       fetchWeeklyCourses().catch(() => []),
       fetchVocabOverview(),
+      fetchWritingOverview(),
     ]);
 
     setName(profile?.name ?? null);
     setWeekly(summarizeWeekly(courses));
     setTotalSets(overview.totalSets);
     setTestedSetCount(overview.testedSetCount);
+    setWritingTotal(writing.total);
+    setWritingDone(writing.done);
   }, []);
 
   useEffect(() => {
@@ -153,7 +159,12 @@ export default function HomeScreen() {
         <Text className="mb-3 mt-8 text-base font-bold text-ink-soft">
           학습 유형
         </Text>
-        <StudyCardList totalSets={totalSets} testedSetCount={testedSetCount} />
+        <StudyCardList
+          totalSets={totalSets}
+          testedSetCount={testedSetCount}
+          writingTotal={writingTotal}
+          writingDone={writingDone}
+        />
       </ScrollView>
     </View>
   );

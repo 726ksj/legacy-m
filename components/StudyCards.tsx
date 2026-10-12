@@ -8,6 +8,11 @@ interface VocabCardProps {
   testedSetCount: number;
 }
 
+interface StudyCardListProps extends VocabCardProps {
+  writingTotal: number;
+  writingDone: number;
+}
+
 function ComingSoonCard({
   title,
   subtitle,
@@ -79,8 +84,16 @@ export function VocabStudyCard({ totalSets, testedSetCount }: VocabCardProps) {
   );
 }
 
-export function WritingStudyCard() {
+export function WritingStudyCard({
+  total,
+  done,
+}: {
+  total: number;
+  done: number;
+}) {
   const colors = categoryColors.writing;
+  const statusText =
+    total === 0 ? "학습할 문장 없음" : `${done} / ${total}개 완료`;
   return (
     <Pressable
       onPress={() => router.push("/writing")}
@@ -95,7 +108,17 @@ export function WritingStudyCard() {
         <Text className="text-lg font-bold" style={{ color: colors.fg }}>
           어순 배열
         </Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.fg} />
+        <View className="flex-row items-center gap-1">
+          <View
+            className="rounded-full px-2.5 py-0.5"
+            style={{ backgroundColor: colors.accent }}
+          >
+            <Text className="text-sm font-bold" style={{ color: colors.fg }}>
+              {statusText}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.fg} />
+        </View>
       </View>
       <Text className="mt-1 text-sm text-ink-soft">
         문장을 암기하고 배열해요
@@ -104,11 +127,16 @@ export function WritingStudyCard() {
   );
 }
 
-export function StudyCardList({ totalSets, testedSetCount }: VocabCardProps) {
+export function StudyCardList({
+  totalSets,
+  testedSetCount,
+  writingTotal,
+  writingDone,
+}: StudyCardListProps) {
   return (
     <View className="gap-3">
       <VocabStudyCard totalSets={totalSets} testedSetCount={testedSetCount} />
-      <WritingStudyCard />
+      <WritingStudyCard total={writingTotal} done={writingDone} />
       <ComingSoonCard
         title="순서 배열"
         subtitle="지문과 문장의 순서를 맞춰요"
