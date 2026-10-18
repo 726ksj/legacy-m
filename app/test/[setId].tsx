@@ -8,10 +8,9 @@ import {
   View,
 } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import { brandGradient, colors } from "../../lib/theme";
+import { colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 import {
   friendlyTestError,
@@ -305,30 +304,6 @@ export default function TestOverviewScreen() {
                     />
                   ))}
               </View>
-
-              {status.total_score !== null && (
-                <LinearGradient
-                  colors={brandGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    borderRadius: 28,
-                    paddingHorizontal: 22,
-                    paddingVertical: 22,
-                  }}
-                >
-                  <Text className="text-sm font-bold text-cream">
-                    {allDone ? "테스트 완료" : "종합 점수"}
-                  </Text>
-                  <Text className="mt-1 text-4xl font-extrabold text-white">
-                    종합 {status.total_score}점
-                  </Text>
-                  <Text className="mt-2 text-sm text-white/80">
-                    1차 시험 {status.first_score}점 × 40% + 2차 시험{" "}
-                    {status.final_score}점 × 60%
-                  </Text>
-                </LinearGradient>
-              )}
 
               {!allDone && (
                 <Pressable

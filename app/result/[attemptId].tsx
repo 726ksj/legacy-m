@@ -60,12 +60,12 @@ function QuestionRow({ question }: { question: AttemptQuestion }) {
       </View>
       {wrong && picked && (
         <Text className="mt-2 text-base text-red-500">
-          내가 고른 답 · {picked}
+          내가 고른 답: {picked}
         </Text>
       )}
       {correct && (
         <Text className="mt-1 text-base text-emerald-700">
-          정답 · {correct}
+          정답: {correct}
         </Text>
       )}
       {question.example && (
