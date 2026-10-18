@@ -1,80 +1,81 @@
 import { useCallback, useState } from "react";
 import {
-  Pressable,
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   ScrollView,
   Text,
   View,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
-import { categoryColors, colors } from "../../lib/theme";
+import { colors } from "../../lib/theme";
+import {
+  fetchCourseResults,
+  NO_WEEK,
+  testsOfWeek,
+  weekRange,
+  type CourseResults,
+} from "../../lib/results";
 import ScreenHeader from "../../components/ScreenHeader";
 import EmptyState from "../../components/EmptyState";
 
-interface VocabResultRow {
-  id: string;
-  vocab_set_id: string;
-  score: number;
-  total_count: number;
-  correct_count: number;
-  tested_at: string;
-  vocab_sets: { title: string } | null;
+// 강좌 기간(1주차~N주차)을 주차별로 나열한다. 주차를 누르면 그 주에 본 시험의 결과를 본다.
+function WeekRow({ course, week }: { course: CourseResults; week: number }) {
+  const tests = testsOfWeek(course, week);
+  const done = tests.filter((t) => t.status === "completed").length;
+  const hasTiming = tests.some((t) => t.timings.length > 0);
+  const isCurrent = week === course.currentWeek;
+  const notStarted =
+    course.currentWeek !== null && week > course.currentWeek && done === 0;
+  const range = week === NO_WEEK ? null : weekRange(course.startDate, week);
+
+  return (
+    <Pressable
+      onPress={() =>
+        router.push({
+          pathname: "/week-result",
+          params: { course: course.key, week: String(week) },
+        })
+      }
+      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+      className={`flex-row items-center justify-between rounded-3xl border px-5 py-4 ${
+        isCurrent ? "border-brand bg-white" : "border-line bg-white"
+      } ${notStarted ? "opacity-60" : ""}`}
+    >
+      <View className="flex-1 pr-3">
+        <View className="flex-row items-center gap-2">
+          <Text className="text-lg font-bold text-ink">
+            {week === NO_WEEK ? "주차 미지정" : `${week}주차`}
+          </Text>
+          {isCurrent && (
+            <View className="rounded-full bg-brand px-2 py-0.5">
+              <Text className="text-xs font-bold text-white">이번 주</Text>
+            </View>
+          )}
+          {hasTiming && (
+            <View className="rounded-full bg-amber-100 px-2 py-0.5">
+              <Text className="text-xs font-bold text-amber-700">지각</Text>
+            </View>
+          )}
+        </View>
+        <Text className="mt-1 text-sm text-ink-soft">
+          {range ? `${range} · ` : ""}
+          {tests.length === 0
+            ? notStarted
+              ? "시작 전"
+              : "등록된 시험 없음"
+            : `시험 ${tests.length}개 중 ${done}개 완료`}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.inkMuted} />
+    </Pressable>
+  );
 }
-
-interface WritingResultRow {
-  writing_set_id: string;
-  points: number;
-  max_points: number;
-  completed_at: string;
-  writing_sets: { title: string } | null;
-}
-
-// 단어 테스트와 어순 배열 결과를 한 목록으로 합쳐 최신순으로 보여준다.
-interface ResultItem {
-  key: string;
-  kind: "vocab" | "writing";
-  // 단어 결과를 누르면 회차별 점수와 틀린 문제를 볼 수 있는 시험 화면으로 간다.
-  vocabSetId?: string;
-  title: string;
-  scoreLabel: string;
-  detail: string;
-  date: string;
-  // 지각(주차 종료 후 5일 이내) 또는 기한 초과로 응시한 기록. 단어는 1차·2차
-  // 시험을 각각, 서술형은 세트 단위로 하나.
-  timings: TimingTag[];
-}
-
-interface TimingTag {
-  label: string;
-  kind: "late" | "overdue";
-}
-
-interface AttemptFlagRow {
-  is_late: boolean;
-  is_overdue: boolean;
-}
-
-const timingKind = (row: AttemptFlagRow): TimingTag["kind"] | null =>
-  row.is_overdue ? "overdue" : row.is_late ? "late" : null;
-
-const TIMING_LABEL = { late: "지각", overdue: "기한 초과" } as const;
-
-// 단어 시험에서 기한이 걸린 회차(1차 시험, 2차 시험).
-const EXAM_PREFIX: Record<number, string> = { 1: "1차 ", 3: "2차 " };
-
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
-}
-
-const KIND_LABEL = { vocab: "단어", writing: "어순 배열" } as const;
 
 export default function ResultsScreen() {
-  const [items, setItems] = useState<ResultItem[]>([]);
+  const [courses, setCourses] = useState<CourseResults[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -86,86 +87,7 @@ export default function ResultsScreen() {
       router.replace("/login");
       return;
     }
-
-    const [
-      { data: vocab },
-      { data: writing },
-      { data: vocabAttempts },
-      { data: writingAttempts },
-    ] = await Promise.all([
-        supabase
-          .from("vocab_test_results")
-          .select(
-            "id, vocab_set_id, score, total_count, correct_count, tested_at, vocab_sets(title)",
-          )
-          .returns<VocabResultRow[]>(),
-        supabase
-          .from("writing_set_completions")
-          .select(
-            "writing_set_id, points, max_points, completed_at, writing_sets(title)",
-          )
-          .returns<WritingResultRow[]>(),
-        // 지각·기한 초과 표시는 1차·2차 시험 기록에서 가져온다(점수는 그대로 반영).
-        supabase
-          .from("vocab_test_attempts")
-          .select("vocab_set_id, round_no, is_late, is_overdue")
-          .in("round_no", [1, 3])
-          .order("round_no", { ascending: true })
-          .returns<
-            (AttemptFlagRow & { vocab_set_id: string; round_no: number })[]
-          >(),
-        supabase
-          .from("writing_attempts")
-          .select("writing_set_id, is_late, is_overdue")
-          .order("started_at", { ascending: true })
-          .returns<(AttemptFlagRow & { writing_set_id: string })[]>(),
-      ]);
-
-    const vocabTiming = new Map<string, TimingTag[]>();
-    for (const row of vocabAttempts ?? []) {
-      const kind = timingKind(row);
-      if (!kind) continue;
-      const tags = vocabTiming.get(row.vocab_set_id) ?? [];
-      tags.push({
-        label: `${EXAM_PREFIX[row.round_no] ?? ""}${TIMING_LABEL[kind]}`,
-        kind,
-      });
-      vocabTiming.set(row.vocab_set_id, tags);
-    }
-    const writingTiming = new Map<string, TimingTag[]>();
-    for (const row of writingAttempts ?? []) {
-      const kind = timingKind(row);
-      if (!writingTiming.has(row.writing_set_id)) {
-        writingTiming.set(
-          row.writing_set_id,
-          kind ? [{ label: TIMING_LABEL[kind], kind }] : [],
-        );
-      }
-    }
-
-    const merged: ResultItem[] = [
-      ...(vocab ?? []).map<ResultItem>((r) => ({
-        key: `vocab:${r.id}`,
-        kind: "vocab",
-        vocabSetId: r.vocab_set_id,
-        title: r.vocab_sets?.title ?? "단어 테스트",
-        scoreLabel: `${r.score}점`,
-        detail: `${r.correct_count}/${r.total_count}개 정답`,
-        date: r.tested_at,
-        timings: vocabTiming.get(r.vocab_set_id) ?? [],
-      })),
-      ...(writing ?? []).map<ResultItem>((r) => ({
-        key: `writing:${r.writing_set_id}`,
-        kind: "writing",
-        title: r.writing_sets?.title ?? "어순 배열",
-        scoreLabel: `${r.points} / ${r.max_points}점`,
-        detail: "모든 문장 완성",
-        date: r.completed_at,
-        timings: writingTiming.get(r.writing_set_id) ?? [],
-      })),
-    ].sort((a, b) => b.date.localeCompare(a.date));
-
-    setItems(merged);
+    setCourses(await fetchCourseResults().catch(() => []));
   }, []);
 
   useFocusEffect(
@@ -204,80 +126,33 @@ export default function ResultsScreen() {
           />
         }
       >
-        <Text className="mt-6 text-base text-ink-soft">
-          단어 테스트와 어순 배열 기록이에요
-        </Text>
+        {courses.length === 0 && (
+          <EmptyState
+            icon="stats-chart-outline"
+            title="아직 학습 기록이 없어요"
+            description="수강 중인 강좌의 주차별 결과가 여기에 쌓여요"
+          />
+        )}
 
-        <View className="mt-4 gap-3">
-          {items.length === 0 && (
-            <EmptyState
-              icon="stats-chart-outline"
-              title="아직 학습 기록이 없어요"
-              description="시험을 마치면 점수가 여기에 쌓여요"
-            />
-          )}
-
-          {items.map((item) => {
-            const palette = categoryColors[item.kind];
-            return (
-              <Pressable
-                key={item.key}
-                disabled={!item.vocabSetId}
-                onPress={() => router.push(`/test/${item.vocabSetId}`)}
-                className="rounded-3xl px-5 py-4 active:opacity-80"
-                style={{
-                  backgroundColor: palette.bg,
-                  borderWidth: 1,
-                  borderColor: palette.border,
-                }}
-              >
-                <View className="flex-row items-center justify-between gap-3">
-                  <View className="flex-1 flex-row items-center gap-2">
-                    <View
-                      className="rounded-full px-2.5 py-0.5"
-                      style={{ backgroundColor: palette.accent }}
-                    >
-                      <Text
-                        className="text-sm font-bold"
-                        style={{ color: palette.fg }}
-                      >
-                        {KIND_LABEL[item.kind]}
-                      </Text>
-                    </View>
-                    <Text className="flex-1 text-lg font-bold text-ink">
-                      {item.title}
-                    </Text>
-                  </View>
-                  <View className="rounded-full bg-white px-3 py-1">
-                    <Text
-                      className="text-base font-extrabold"
-                      style={{ color: palette.fg }}
-                    >
-                      {item.scoreLabel}
-                    </Text>
-                  </View>
-                </View>
-                <View className="mt-1.5 flex-row items-center gap-2">
-                  <Text className="text-sm text-ink-soft">
-                    {item.detail} · {formatDate(item.date)}
-                  </Text>
-                  {item.timings.map((tag) => (
-                    <View
-                      key={tag.label}
-                      className={`rounded-full px-2 py-0.5 ${tag.kind === "overdue" ? "bg-red-100" : "bg-amber-100"}`}
-                    >
-                      <Text
-                        className={`text-[12px] font-bold ${tag.kind === "overdue" ? "text-red-600" : "text-amber-700"}`}
-                      >
-                        {tag.label}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
+        {courses.map((course) => {
+          // 1주차부터 강사가 설정한 기간까지. 주차가 지정되지 않은 시험은 맨 아래.
+          const weeks = Array.from(
+            { length: course.totalWeeks },
+            (_, i) => i + 1,
+          );
+          const hasNoWeek = testsOfWeek(course, NO_WEEK).length > 0;
+          return (
+            <View key={course.key} className="mt-6 gap-3">
+              <Text className="text-base font-bold text-ink-soft">
+                {course.label}
+              </Text>
+              {weeks.map((week) => (
+                <WeekRow key={week} course={course} week={week} />
+              ))}
+              {hasNoWeek && <WeekRow course={course} week={NO_WEEK} />}
+            </View>
+          );
+        })}
       </ScrollView>
     </View>
   );

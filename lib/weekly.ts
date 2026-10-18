@@ -62,3 +62,22 @@ export const STATUS_LABEL: Record<TaskStatus, string> = {
   in_progress: "진행 중",
   completed: "완료",
 };
+
+// 강좌의 현재 주차 마감(주차 마지막 날)까지 남은 기간. 시작일이나 주차를 알 수 없으면 null.
+export function weekDeadline(
+  course: Pick<WeeklyCourse, "start_date" | "current_week">,
+): { label: string; urgent: boolean } | null {
+  if (!course.start_date || course.current_week === null) return null;
+  if (course.current_week < 1) return null;
+  const [y, m, d] = course.start_date.split("-").map(Number);
+  const end = Date.UTC(y, m - 1, d + course.current_week * 7 - 1);
+  // 한국 시간(KST) 기준 오늘.
+  const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const today = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  const left = Math.round((end - today) / 86400000);
+  return { label: left <= 0 ? "오늘 마감" : `D-${left}`, urgent: left <= 1 };
+}

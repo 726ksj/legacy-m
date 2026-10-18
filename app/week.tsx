@@ -1,103 +1,18 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   RefreshControl,
   ScrollView,
   Text,
   View,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
-import { categoryColors, colors } from "../lib/theme";
-import {
-  fetchWeeklyCourses,
-  KIND_LABEL,
-  STATUS_LABEL,
-  type WeeklyCourse,
-  type WeeklyTask,
-} from "../lib/weekly";
+import { colors } from "../lib/theme";
+import { fetchWeeklyCourses, type WeeklyCourse } from "../lib/weekly";
+import TaskRow from "../components/TaskRow";
 import EmptyState from "../components/EmptyState";
 import ScreenHeader from "../components/ScreenHeader";
-
-const STATUS_STYLE: Record<WeeklyTask["status"], { bg: string; text: string }> =
-  {
-    not_started: { bg: "bg-white/80", text: "text-ink-soft" },
-    in_progress: { bg: "bg-amber-100", text: "text-amber-700" },
-    completed: { bg: "bg-white", text: "text-emerald-600" },
-  };
-
-function TaskRow({ task }: { task: WeeklyTask }) {
-  const style = STATUS_STYLE[task.status];
-  // 단어는 민트, 어순 배열은 분홍으로 구분한다.
-  const palette =
-    task.kind === "vocab" ? categoryColors.vocab : categoryColors.writing;
-  const open = () =>
-    router.push(
-      task.kind === "vocab" ? `/test/${task.id}` : `/writing/${task.id}`,
-    );
-
-  return (
-    <Pressable
-      onPress={open}
-      style={{
-        backgroundColor: palette.bg,
-        borderWidth: 1,
-        borderColor: palette.border,
-      }}
-      className="rounded-3xl px-5 py-4 active:opacity-80"
-    >
-      <View className="flex-row items-center justify-between gap-3">
-        <View className="flex-1">
-          <View className="flex-row items-center gap-2">
-            <View
-              className="rounded-full px-2.5 py-0.5"
-              style={{ backgroundColor: palette.accent }}
-            >
-              <Text
-                className="text-[13px] font-bold"
-                style={{ color: palette.fg }}
-              >
-                {KIND_LABEL[task.kind]}
-              </Text>
-            </View>
-            {task.week !== null && (
-              <Text className="text-sm font-semibold text-ink-soft">
-                {task.week}주차
-              </Text>
-            )}
-          </View>
-          <Text className="mt-1.5 text-lg font-bold text-ink">
-            {task.title}
-          </Text>
-        </View>
-        <View className="items-end gap-1.5">
-          <View className={`rounded-full px-2.5 py-1 ${style.bg}`}>
-            <Text className={`text-sm font-bold ${style.text}`}>
-              {STATUS_LABEL[task.status]}
-            </Text>
-          </View>
-          {task.is_late && (
-            <View className="rounded-full bg-amber-100 px-2.5 py-0.5">
-              <Text className="text-[13px] font-bold text-amber-700">
-                지각 응시
-              </Text>
-            </View>
-          )}
-          {task.is_overdue && (
-            <View className="rounded-full bg-red-100 px-2.5 py-0.5">
-              <Text className="text-[13px] font-bold text-red-600">
-                기한 초과
-              </Text>
-            </View>
-          )}
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={colors.inkMuted} />
-      </View>
-    </Pressable>
-  );
-}
 
 export default function WeeklyTasksScreen() {
   const [courses, setCourses] = useState<WeeklyCourse[]>([]);
