@@ -59,6 +59,14 @@ export default function VocabScreen() {
     setRefreshing(false);
   }, [load]);
 
+  // 모든 회차를 끝낸 단어장은 학습 목록에서 빼고 학습 결과에서 본다.
+  const visibleGroups = groups
+    .map((group) => ({
+      ...group,
+      sets: group.sets.filter((set) => statuses.get(set.id) !== "completed"),
+    }))
+    .filter((group) => group.sets.length > 0);
+
   return (
     <View className="flex-1 bg-blush">
       <ScreenHeader title="단어 학습" back />
@@ -95,7 +103,15 @@ export default function VocabScreen() {
             />
           )}
 
-          {groups.map((group) => (
+          {!error && groups.length > 0 && visibleGroups.length === 0 && (
+            <EmptyState
+              icon="checkmark-circle-outline"
+              title="응시할 단어장이 없어요"
+              description="마친 시험은 학습 결과에서 볼 수 있어요"
+            />
+          )}
+
+          {visibleGroups.map((group) => (
             <View key={group.key} className="gap-3">
               <Text className="text-base font-bold text-ink-soft">
                 {group.label}
@@ -148,11 +164,9 @@ export default function VocabScreen() {
                         className="mt-2 text-sm font-bold"
                         style={{ color: categoryColors.vocab.fg }}
                       >
-                        {status === "completed"
-                          ? "다시 보기 ›"
-                          : status === "in_progress"
-                            ? "이어서 하기 ›"
-                            : "시작하기 ›"}
+                        {status === "in_progress"
+                          ? "이어서 하기 ›"
+                          : "시작하기 ›"}
                       </Text>
                     </Pressable>
                   );

@@ -8,8 +8,10 @@ export interface WeeklyTask {
   title: string;
   week: number | null;
   status: TaskStatus;
-  // 지난 주차 시험이라 지금 응시하면 지각 응시가 되는 경우.
+  // 주차 종료 후 5일 이내라 지금 응시하면 지각 응시가 되는 경우.
   is_late: boolean;
+  // 주차 종료 후 5일이 지나 기한 초과로 표시되는 경우.
+  is_overdue: boolean;
 }
 
 export interface WeeklyCourse {
@@ -33,17 +35,20 @@ export interface WeeklySummary {
   // 이번 주 할 일(지각 응시 제외)의 전체/완료 개수.
   total: number;
   done: number;
-  // 지난 주차에서 아직 끝내지 못한 시험(지각 응시 대상) 개수.
+  // 지난 주차에서 아직 끝내지 못한 시험 중 지각(5일 이내) 개수.
   lateCount: number;
+  // 지난 주차에서 아직 끝내지 못한 시험 중 기한 초과 개수.
+  overdueCount: number;
 }
 
 export function summarizeWeekly(courses: WeeklyCourse[]): WeeklySummary {
   const tasks = courses.flatMap((course) => course.tasks);
-  const thisWeek = tasks.filter((task) => !task.is_late);
+  const thisWeek = tasks.filter((task) => !task.is_late && !task.is_overdue);
   return {
     total: thisWeek.length,
     done: thisWeek.filter((task) => task.status === "completed").length,
     lateCount: tasks.filter((task) => task.is_late).length,
+    overdueCount: tasks.filter((task) => task.is_overdue).length,
   };
 }
 

@@ -28,6 +28,7 @@ export default function HomeScreen() {
     total: 0,
     done: 0,
     lateCount: 0,
+    overdueCount: 0,
   });
   // 학습 유형 카드(단어 학습 n/m개 완료)에 쓰는 전체 단어장 현황.
   const [totalSets, setTotalSets] = useState(0);
@@ -76,7 +77,7 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // 이번 주(현재 주차) 시험 중 끝낸 비율. 지난 주 미완료(지각 응시)는 따로 센다.
+  // 이번 주(현재 주차) 시험 중 끝낸 비율. 지난 주 미완료(지각·기한 초과)는 따로 센다.
   const progressPct =
     weekly.total === 0 ? 0 : Math.round((weekly.done / weekly.total) * 100);
 
@@ -153,6 +154,9 @@ export default function HomeScreen() {
               ? "이번 주 할 일이 없어요"
               : `이번 주 시험 ${weekly.total}개 중 ${weekly.done}개 완료`}
             {weekly.lateCount > 0 ? ` · 지각 응시 ${weekly.lateCount}개` : ""}
+            {weekly.overdueCount > 0
+              ? ` · 기한 초과 ${weekly.overdueCount}개`
+              : ""}
           </Text>
         </Pressable>
 

@@ -11,7 +11,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import { brandGradient, categoryColors, colors } from "../../lib/theme";
+import { brandGradient, colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 import {
   friendlyTestError,
@@ -24,14 +24,27 @@ import {
   type TestStatus,
 } from "../../lib/test";
 
+type Timing = "late" | "overdue" | null;
+
+const TIMING_LABEL = { late: "지각", overdue: "기한 초과" } as const;
+
+// 기한(주차 종료일)이 걸린 시험은 1차 시험과 2차 시험이고, 재시험에는 별도 기한이 없다.
+const isExamRound = (roundNo: number) => roundNo === 1 || roundNo === 3;
+
 function RoundCard({
   roundNo,
   round,
   skipped,
+  timing,
+  onPress,
 }: {
   roundNo: number;
   round: TestRound | undefined;
   skipped: boolean;
+  // 응시한 회차는 그 회차의 기록, 아직 안 푼 시험은 지금 시작하면 적용될 값.
+  timing: Timing;
+  // 응시를 마친 회차만 눌러서 틀린 문제를 볼 수 있다.
+  onPress?: () => void;
 }) {
   let badge = "대기";
   let badgeBg = "bg-blush";
@@ -49,23 +62,53 @@ function RoundCard({
   }
 
   return (
-    <View className="flex-row items-center justify-between rounded-3xl border border-line bg-white px-5 py-4 shadow-sm shadow-brand/20">
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => ({ opacity: onPress && pressed ? 0.85 : 1 })}
+      className="flex-row items-center justify-between rounded-3xl border border-line bg-white px-5 py-4 shadow-sm shadow-brand/20"
+    >
       <View className="flex-1 pr-3">
-        <Text className="text-lg font-bold text-ink">
-          {ROUND_TITLE[roundNo]}
-        </Text>
+        <View className="flex-row items-center gap-2">
+          <Text className="text-lg font-bold text-ink">
+            {ROUND_TITLE[roundNo]}
+          </Text>
+          {timing && (
+            <View
+              className={`rounded-full px-2 py-0.5 ${
+                timing === "overdue" ? "bg-red-100" : "bg-amber-100"
+              }`}
+            >
+              <Text
+                className={`text-xs font-bold ${
+                  timing === "overdue" ? "text-red-600" : "text-amber-700"
+                }`}
+              >
+                {TIMING_LABEL[timing]}
+              </Text>
+            </View>
+          )}
+        </View>
         <Text className="mt-1 text-sm text-ink-soft">
           {round
             ? `${round.correct_count ?? 0} / ${round.total_count} 정답`
             : skipped
               ? "틀린 단어가 없어 건너뛰었어요"
-              : (RETEST_DESCRIPTION[roundNo] ?? "아직 시작하지 않았어요")}
+              : timing
+                ? "기한이 지나 지금 응시하면 " +
+                  `${TIMING_LABEL[timing]}(으)로 표시돼요`
+                : (RETEST_DESCRIPTION[roundNo] ?? "아직 시작하지 않았어요")}
         </Text>
       </View>
-      <View className={`rounded-full px-3 py-1 ${badgeBg}`}>
-        <Text className={`text-sm font-bold ${badgeText}`}>{badge}</Text>
+      <View className="flex-row items-center gap-1">
+        <View className={`rounded-full px-3 py-1 ${badgeBg}`}>
+          <Text className={`text-sm font-bold ${badgeText}`}>{badge}</Text>
+        </View>
+        {onPress && (
+          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+        )}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -124,6 +167,15 @@ export default function TestOverviewScreen() {
   const round2 = status?.rounds.find((round) => round.round_no === 2);
   const round2Skipped =
     round1?.status === "completed" && !round2 && status?.next_round === 3;
+  // 아직 시작하지 않은 시험(1차·2차). 기한이 지났다면 지각 안내 대상이다.
+  const pendingExams = [1, 3].filter(
+    (n) => !status?.rounds.some((round) => round.round_no === n),
+  );
+  const timingOf = (roundNo: number, round: TestRound | undefined): Timing => {
+    if (round) return round.is_overdue ? "overdue" : round.is_late ? "late" : null;
+    if (!isExamRound(roundNo) || !status) return null;
+    return status.is_overdue ? "overdue" : status.is_late ? "late" : null;
+  };
   const allDone = status !== null && !inProgress && status.next_round === null;
 
   const onPrimary = async () => {
@@ -188,13 +240,27 @@ export default function TestOverviewScreen() {
             </View>
           )}
 
-          {status?.is_late && (
+          {pendingExams.length > 0 && status?.is_overdue && (
+            <View className="rounded-xl bg-red-50 px-4 py-3">
+              <Text className="text-base font-bold text-red-600">
+                기한 초과
+              </Text>
+              <Text className="mt-0.5 text-sm text-red-600">
+                {pendingExams.map((n) => ROUND_TITLE[n]).join("·")} 기한(주차
+                종료 후 5일)이 지났어요. 응시할 수 있지만 기한 초과로 표시되고
+                점수는 반영돼요.
+              </Text>
+            </View>
+          )}
+          {pendingExams.length > 0 && status?.is_late && !status.is_overdue && (
             <View className="rounded-xl bg-amber-50 px-4 py-3">
               <Text className="text-base font-bold text-amber-700">
-                지각 응시
+                지각 응시 안내
               </Text>
               <Text className="mt-0.5 text-sm text-amber-700">
-                지난 주차 시험이에요. 지금 응시하면 지각 응시로 기록돼요.
+                {pendingExams.map((n) => ROUND_TITLE[n]).join("·")}을(를) 기한
+                안에 응시하지 못했어요. 지금 응시하면 지각으로 표시되고 점수는
+                반영돼요.
               </Text>
             </View>
           )}
@@ -220,6 +286,22 @@ export default function TestOverviewScreen() {
                         (round) => round.round_no === roundNo,
                       )}
                       skipped={roundNo === 2 && round2Skipped}
+                      onPress={(() => {
+                        const done = status.rounds.find(
+                          (round) =>
+                            round.round_no === roundNo &&
+                            round.status === "completed",
+                        );
+                        return done
+                          ? () => router.push(`/result/${done.attempt_id}`)
+                          : undefined;
+                      })()}
+                      timing={timingOf(
+                        roundNo,
+                        status.rounds.find(
+                          (round) => round.round_no === roundNo,
+                        ),
+                      )}
                     />
                   ))}
               </View>
@@ -247,28 +329,6 @@ export default function TestOverviewScreen() {
                   </Text>
                 </LinearGradient>
               )}
-
-              <Pressable
-                onPress={() => router.push(`/memorize/${setId}`)}
-                style={{
-                  backgroundColor: categoryColors.vocab.bg,
-                  borderWidth: 1,
-                  borderColor: categoryColors.vocab.border,
-                }}
-                className="flex-row items-center justify-center gap-2 rounded-2xl py-4 active:opacity-80"
-              >
-                <Ionicons
-                  name="albums-outline"
-                  size={20}
-                  color={categoryColors.vocab.fg}
-                />
-                <Text
-                  className="text-lg font-bold"
-                  style={{ color: categoryColors.vocab.fg }}
-                >
-                  단어 암기하기
-                </Text>
-              </Pressable>
 
               {!allDone && (
                 <Pressable

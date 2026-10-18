@@ -256,7 +256,18 @@ export default function WritingStudyScreen() {
                 지각 응시
               </Text>
               <Text className="mt-0.5 text-sm text-amber-700">
-                지난 주차 시험이에요. 지금 응시하면 지각 응시로 기록돼요.
+                주차가 끝난 지 5일 이내예요. 점수는 반영되고 지각으로 표시돼요.
+              </Text>
+            </View>
+          )}
+          {progress?.is_overdue && (
+            <View className="rounded-xl bg-red-50 px-4 py-3">
+              <Text className="text-base font-bold text-red-600">
+                기한 초과
+              </Text>
+              <Text className="mt-0.5 text-sm text-red-600">
+                주차가 끝난 지 5일이 지났어요. 응시할 수 있지만 기한 초과로
+                표시돼요.
               </Text>
             </View>
           )}

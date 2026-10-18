@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import {
+  Pressable,
   ActivityIndicator,
   RefreshControl,
   ScrollView,
@@ -14,6 +15,7 @@ import EmptyState from "../../components/EmptyState";
 
 interface VocabResultRow {
   id: string;
+  vocab_set_id: string;
   score: number;
   total_count: number;
   correct_count: number;
@@ -33,11 +35,34 @@ interface WritingResultRow {
 interface ResultItem {
   key: string;
   kind: "vocab" | "writing";
+  // 단어 결과를 누르면 회차별 점수와 틀린 문제를 볼 수 있는 시험 화면으로 간다.
+  vocabSetId?: string;
   title: string;
   scoreLabel: string;
   detail: string;
   date: string;
+  // 지각(주차 종료 후 5일 이내) 또는 기한 초과로 응시한 기록. 단어는 1차·2차
+  // 시험을 각각, 서술형은 세트 단위로 하나.
+  timings: TimingTag[];
 }
+
+interface TimingTag {
+  label: string;
+  kind: "late" | "overdue";
+}
+
+interface AttemptFlagRow {
+  is_late: boolean;
+  is_overdue: boolean;
+}
+
+const timingKind = (row: AttemptFlagRow): TimingTag["kind"] | null =>
+  row.is_overdue ? "overdue" : row.is_late ? "late" : null;
+
+const TIMING_LABEL = { late: "지각", overdue: "기한 초과" } as const;
+
+// 단어 시험에서 기한이 걸린 회차(1차 시험, 2차 시험).
+const EXAM_PREFIX: Record<number, string> = { 1: "1차 ", 3: "2차 " };
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -62,12 +87,16 @@ export default function ResultsScreen() {
       return;
     }
 
-    const [{ data: vocab }, { data: writing }, { data: lateAttempts }] =
-      await Promise.all([
+    const [
+      { data: vocab },
+      { data: writing },
+      { data: vocabAttempts },
+      { data: writingAttempts },
+    ] = await Promise.all([
         supabase
           .from("vocab_test_results")
           .select(
-            "id, score, total_count, correct_count, tested_at, vocab_sets(title)",
+            "id, vocab_set_id, score, total_count, correct_count, tested_at, vocab_sets(title)",
           )
           .returns<VocabResultRow[]>(),
         supabase
@@ -76,36 +105,64 @@ export default function ResultsScreen() {
             "writing_set_id, points, max_points, completed_at, writing_sets(title)",
           )
           .returns<WritingResultRow[]>(),
-        // 지각 응시한 어순 배열 세트는 점수 반영 방식이 정해질 때까지 결과에서 뺀다.
+        // 지각·기한 초과 표시는 1차·2차 시험 기록에서 가져온다(점수는 그대로 반영).
+        supabase
+          .from("vocab_test_attempts")
+          .select("vocab_set_id, round_no, is_late, is_overdue")
+          .in("round_no", [1, 3])
+          .order("round_no", { ascending: true })
+          .returns<
+            (AttemptFlagRow & { vocab_set_id: string; round_no: number })[]
+          >(),
         supabase
           .from("writing_attempts")
-          .select("writing_set_id")
-          .eq("is_late", true),
+          .select("writing_set_id, is_late, is_overdue")
+          .order("started_at", { ascending: true })
+          .returns<(AttemptFlagRow & { writing_set_id: string })[]>(),
       ]);
 
-    const lateSets = new Set(
-      (lateAttempts ?? []).map((row) => row.writing_set_id),
-    );
+    const vocabTiming = new Map<string, TimingTag[]>();
+    for (const row of vocabAttempts ?? []) {
+      const kind = timingKind(row);
+      if (!kind) continue;
+      const tags = vocabTiming.get(row.vocab_set_id) ?? [];
+      tags.push({
+        label: `${EXAM_PREFIX[row.round_no] ?? ""}${TIMING_LABEL[kind]}`,
+        kind,
+      });
+      vocabTiming.set(row.vocab_set_id, tags);
+    }
+    const writingTiming = new Map<string, TimingTag[]>();
+    for (const row of writingAttempts ?? []) {
+      const kind = timingKind(row);
+      if (!writingTiming.has(row.writing_set_id)) {
+        writingTiming.set(
+          row.writing_set_id,
+          kind ? [{ label: TIMING_LABEL[kind], kind }] : [],
+        );
+      }
+    }
 
     const merged: ResultItem[] = [
       ...(vocab ?? []).map<ResultItem>((r) => ({
         key: `vocab:${r.id}`,
         kind: "vocab",
+        vocabSetId: r.vocab_set_id,
         title: r.vocab_sets?.title ?? "단어 테스트",
         scoreLabel: `${r.score}점`,
         detail: `${r.correct_count}/${r.total_count}개 정답`,
         date: r.tested_at,
+        timings: vocabTiming.get(r.vocab_set_id) ?? [],
       })),
-      ...(writing ?? [])
-        .filter((r) => !lateSets.has(r.writing_set_id))
-        .map<ResultItem>((r) => ({
-          key: `writing:${r.writing_set_id}`,
-          kind: "writing",
-          title: r.writing_sets?.title ?? "어순 배열",
-          scoreLabel: `${r.points} / ${r.max_points}점`,
-          detail: "모든 문장 완성",
-          date: r.completed_at,
-        })),
+      ...(writing ?? []).map<ResultItem>((r) => ({
+        key: `writing:${r.writing_set_id}`,
+        kind: "writing",
+        title: r.writing_sets?.title ?? "어순 배열",
+        scoreLabel: `${r.points} / ${r.max_points}점`,
+        detail: "모든 문장 완성",
+        date: r.completed_at,
+        timings: writingTiming.get(r.writing_set_id) ?? [],
+      })),
     ].sort((a, b) => b.date.localeCompare(a.date));
 
     setItems(merged);
@@ -163,9 +220,11 @@ export default function ResultsScreen() {
           {items.map((item) => {
             const palette = categoryColors[item.kind];
             return (
-              <View
+              <Pressable
                 key={item.key}
-                className="rounded-3xl px-5 py-4"
+                disabled={!item.vocabSetId}
+                onPress={() => router.push(`/test/${item.vocabSetId}`)}
+                className="rounded-3xl px-5 py-4 active:opacity-80"
                 style={{
                   backgroundColor: palette.bg,
                   borderWidth: 1,
@@ -198,10 +257,24 @@ export default function ResultsScreen() {
                     </Text>
                   </View>
                 </View>
-                <Text className="mt-1.5 text-sm text-ink-soft">
-                  {item.detail} · {formatDate(item.date)}
-                </Text>
-              </View>
+                <View className="mt-1.5 flex-row items-center gap-2">
+                  <Text className="text-sm text-ink-soft">
+                    {item.detail} · {formatDate(item.date)}
+                  </Text>
+                  {item.timings.map((tag) => (
+                    <View
+                      key={tag.label}
+                      className={`rounded-full px-2 py-0.5 ${tag.kind === "overdue" ? "bg-red-100" : "bg-amber-100"}`}
+                    >
+                      <Text
+                        className={`text-[12px] font-bold ${tag.kind === "overdue" ? "text-red-600" : "text-amber-700"}`}
+                      >
+                        {tag.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </Pressable>
             );
           })}
         </View>

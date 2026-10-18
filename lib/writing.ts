@@ -138,8 +138,10 @@ export interface WritingProgress {
   max_points: number;
   first_try_rate: number | null;
   passed: boolean;
-  // 지난 주차 시험을 늦게 응시하는 경우(지각 응시).
+  // 주차 종료 후 5일 이내에 응시하는 경우(지각 응시).
   is_late: boolean;
+  // 주차 종료 후 5일이 지나 응시하는 경우(기한 초과).
+  is_overdue: boolean;
 }
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {

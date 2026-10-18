@@ -85,6 +85,13 @@ function TaskRow({ task }: { task: WeeklyTask }) {
               </Text>
             </View>
           )}
+          {task.is_overdue && (
+            <View className="rounded-full bg-red-100 px-2.5 py-0.5">
+              <Text className="text-[13px] font-bold text-red-600">
+                기한 초과
+              </Text>
+            </View>
+          )}
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.inkMuted} />
       </View>
@@ -166,8 +173,12 @@ export default function WeeklyTasksScreen() {
           )}
 
           {visible.map((course) => {
-            const thisWeek = course.tasks.filter((task) => !task.is_late);
-            const late = course.tasks.filter((task) => task.is_late);
+            const thisWeek = course.tasks.filter(
+              (task) => !task.is_late && !task.is_overdue,
+            );
+            const late = course.tasks.filter(
+              (task) => task.is_late || task.is_overdue,
+            );
             return (
               <View key={course.course_id} className="gap-3">
                 <View className="flex-row items-center justify-between">
@@ -194,7 +205,7 @@ export default function WeeklyTasksScreen() {
                 {late.length > 0 && (
                   <View className="mt-2 gap-3">
                     <Text className="text-sm font-bold text-amber-700">
-                      지난 주 시험 · 지각 응시
+                      지난 주 시험 · 지각 응시 / 기한 초과
                     </Text>
                     {late.map((task) => (
                       <TaskRow key={`${task.kind}:${task.id}`} task={task} />

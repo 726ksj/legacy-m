@@ -7,6 +7,10 @@ export interface TestRound {
   total_count: number;
   correct_count: number | null;
   score: number | null;
+  // 이 회차를 시작한 시점 기준 지각(주차 종료 후 5일 이내) / 기한 초과.
+  // 재시험은 부모 시험(1차 재시험=1차, 2차·3차 재시험=2차)의 값을 따른다.
+  is_late: boolean;
+  is_overdue: boolean;
 }
 
 export interface TestStatus {
@@ -15,8 +19,11 @@ export interface TestStatus {
   first_score: number | null;
   final_score: number | null;
   total_score: number | null;
-  // 지난 주차 시험을 늦게 응시하는 경우(지각 응시).
+  // 지금 응시를 시작하면 지각(주차 종료 후 5일 이내)인지. 아직 응시하지 않은
+  // 시험의 안내용이다. 이미 응시한 회차는 rounds[].is_late를 쓴다.
   is_late: boolean;
+  // 지금 응시를 시작하면 기한 초과(주차 종료 후 5일 초과)인지.
+  is_overdue: boolean;
 }
 
 export interface AttemptQuestion {
