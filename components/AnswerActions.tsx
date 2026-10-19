@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, View } from "react-native";
+import { Text } from "./AppText";
 
 // 4지선다 하단 버튼. 보기를 누르면 "선택"만 되고, 확인을 눌러야 답이 확정된다
 // (실수로 눌러 오답이 되는 것을 막기 위해). 답을 확정한 뒤에는 다음 단계 버튼 하나만 보인다.

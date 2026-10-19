@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "./AppText";
 import { Ionicons } from "@expo/vector-icons";
 
 // 목록이 비었을 때 쓰는 공통 안내. 크림색 원 안에 와인색 아이콘.

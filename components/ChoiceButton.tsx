@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "./AppText";
 
 interface ChoiceQuestion {
   selected_index: number | null;

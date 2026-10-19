@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Text } from "../../components/AppText";
 import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { categoryColors, colors } from "../../lib/theme";

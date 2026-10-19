@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, View } from "react-native";
+import { Text } from "../../components/AppText";
 import { router } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { colors } from "../../lib/theme";

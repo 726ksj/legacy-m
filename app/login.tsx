@@ -1,16 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, TextInput, View } from "react-native";
+import { FONT, Text } from "../components/AppText";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
@@ -37,6 +27,7 @@ function FormInput({
       </Text>
       <TextInput
         placeholderTextColor={colors.inkMuted}
+        style={{ fontFamily: FONT.medium }}
         className={`rounded-2xl bg-blush px-4 py-4 text-lg text-ink border-2 ${
           focused ? "border-brand bg-white" : "border-transparent"
         }`}

@@ -6,6 +6,16 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
+      // 앱 전체 글자 크기를 한 단계씩 키운다(기본값 대비 +1~4px).
+      fontSize: {
+        xs: ["13px", { lineHeight: "18px" }],
+        sm: ["15px", { lineHeight: "21px" }],
+        base: ["17px", { lineHeight: "24px" }],
+        lg: ["19px", { lineHeight: "27px" }],
+        xl: ["22px", { lineHeight: "30px" }],
+        "2xl": ["26px", { lineHeight: "34px" }],
+        "3xl": ["32px", { lineHeight: "40px" }],
+      },
       colors: {
         brand: {
           DEFAULT: "#e27295",

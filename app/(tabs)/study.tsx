@@ -1,18 +1,12 @@
 import { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, View } from "react-native";
+import { Text } from "../../components/AppText";
 import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { fetchVocabOverview } from "../../lib/vocab";
 import { fetchVocabStatuses } from "../../lib/progress";
 import {
   fetchWeeklyCourses,
-  weekDeadline,
   type WeeklyCourse,
   type WeeklyTask,
 } from "../../lib/weekly";
@@ -31,7 +25,7 @@ const SECTIONS = [
   { kind: "writing", title: "어순 배열", empty: "응시할 어순 배열이 없어요" },
 ] as const;
 
-// 학습 유형 한 칸: 이번 주 시험을 먼저, 지난 주에 못 끝낸 시험(지각·기한 초과)을 아래에 보여 준다.
+// 학습 유형 한 칸: 이번 주 시험을 앞에, 지난 주에 못 끝낸 시험을 뒤에 한 줄씩 나열한다.
 function Section({
   kind,
   title,
@@ -44,51 +38,26 @@ function Section({
   items: StudyItem[];
 }) {
   const palette = categoryColors[kind];
-  const thisWeek = items.filter(
-    ({ task }) => !task.is_late && !task.is_overdue,
-  );
-  const late = items.filter(({ task }) => task.is_late || task.is_overdue);
+  const ordered = [
+    ...items.filter(({ task }) => !task.is_late && !task.is_overdue),
+    ...items.filter(({ task }) => task.is_late || task.is_overdue),
+  ];
 
   return (
     <View className="mt-8 gap-3">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-lg font-extrabold" style={{ color: palette.fg }}>
-          {title}
-        </Text>
-        <View
-          className="rounded-full px-2.5 py-0.5"
-          style={{ backgroundColor: palette.accent }}
-        >
-          <Text className="text-sm font-bold" style={{ color: palette.fg }}>
-            {items.length}개
-          </Text>
-        </View>
-      </View>
+      <Text className="text-2xl font-extrabold" style={{ color: palette.fg }}>
+        {title}
+      </Text>
 
-      {items.length === 0 && (
-        <View className="rounded-3xl border border-line bg-white px-5 py-5">
-          <Text className="text-base text-ink-soft">{empty}</Text>
+      {ordered.length === 0 && (
+        <View className="rounded-3xl border border-line bg-white px-6 py-6">
+          <Text className="text-lg text-ink-soft">{empty}</Text>
         </View>
       )}
 
-      {thisWeek.map(({ task, course }) => (
-        <TaskRow
-          key={`${task.kind}:${task.id}`}
-          task={task}
-          deadline={course ? weekDeadline(course) : null}
-        />
+      {ordered.map(({ task }) => (
+        <TaskRow key={`${task.kind}:${task.id}`} task={task} />
       ))}
-
-      {late.length > 0 && (
-        <>
-          <Text className="mt-1 text-sm font-bold text-amber-700">
-            지난 주 시험 · 지각 응시 / 기한 초과
-          </Text>
-          {late.map(({ task }) => (
-            <TaskRow key={`${task.kind}:${task.id}`} task={task} />
-          ))}
-        </>
-      )}
     </View>
   );
 }
@@ -217,9 +186,6 @@ export default function StudyScreen() {
           />
         </View>
 
-        <Text className="mt-6 text-center text-sm text-ink-soft">
-          마친 시험은 학습 결과에서 볼 수 있어요
-        </Text>
       </ScrollView>
     </View>
   );

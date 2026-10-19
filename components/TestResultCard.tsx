@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "./AppText";
 import { router } from "expo-router";
 import { categoryColors } from "../lib/theme";
 import { KIND_LABEL } from "../lib/weekly";

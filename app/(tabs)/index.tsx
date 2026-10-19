@@ -1,13 +1,6 @@
 import { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Text } from "../../components/AppText";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
@@ -21,7 +14,7 @@ import {
   type WeeklyTask,
 } from "../../lib/weekly";
 import { fetchHomeStats, type HomeStats } from "../../lib/homeStats";
-import { categoryColors, colors } from "../../lib/theme";
+import { colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 
 interface CourseTask {
@@ -101,15 +94,15 @@ export default function HomeScreen() {
     course.tasks.map((task) => ({ task, course })),
   );
   const next = pickNext(allTasks);
-  // 이번 주 마감이 임박한(하루 이내) 미완료 시험.
-  const urgentTasks = allTasks.filter(
+  // 이번 주 마감이 임박한(하루 이내) 미완료 시험이 있으면 진행률 카드에 마감일을 한 줄로 덧붙인다.
+  const urgent = allTasks.find(
     ({ task, course }) =>
       task.status !== "completed" &&
       !task.is_late &&
       !task.is_overdue &&
       weekDeadline(course)?.urgent,
   );
-  const urgentLabel = urgentTasks[0] ? weekDeadline(urgentTasks[0].course)?.label : null;
+  const urgentLabel = urgent ? weekDeadline(urgent.course)?.label : null;
   const scoreDelta =
     stats && stats.average !== null && stats.previousAverage !== null
       ? stats.average - stats.previousAverage
@@ -173,56 +166,32 @@ export default function HomeScreen() {
           이번 주 학습을 이어가 볼까요?
         </Text>
 
-        {/* 이어서 할 시험 하나를 바로 연다. */}
+        {/* 1. 이어서 할 시험 하나를 바로 연다. */}
         {next && (
           <Pressable
             onPress={() => openNext(next.item)}
             style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
-            className="mt-6 flex-row items-center justify-between rounded-3xl bg-brand px-6 py-5 shadow-md shadow-brand/40"
+            className="mt-6 flex-row items-center justify-between rounded-3xl bg-brand px-6 py-6 shadow-md shadow-brand/40"
           >
             <View className="flex-1 pr-3">
-              <Text className="text-sm font-bold text-white/80">
+              <Text className="text-base font-bold text-white/80">
                 {next.label}
               </Text>
-              <Text className="mt-1 text-xl font-extrabold text-white">
+              <Text className="mt-1 text-2xl font-extrabold text-white">
                 {next.item.task.title}
               </Text>
-              <Text className="mt-1 text-sm text-white/80">
+              <Text className="mt-1 text-base text-white/80">
                 {KIND_LABEL[next.item.task.kind]}
                 {next.item.task.week !== null
                   ? ` · ${next.item.task.week}주차`
                   : ""}
               </Text>
             </View>
-            <Ionicons name="play-circle" size={44} color="white" />
+            <Ionicons name="play-circle" size={52} color="white" />
           </Pressable>
         )}
 
-        {/* 이번 주 마감이 임박한 시험과 지각 응시 가능한 시험을 한 줄로 알린다. */}
-        {(urgentTasks.length > 0 || weekly.lateCount > 0) && (
-          <Pressable
-            onPress={() => router.push("/study")}
-            className="mt-4 flex-row items-center rounded-2xl bg-amber-50 px-4 py-3 active:opacity-80"
-          >
-            <Ionicons name="alarm-outline" size={20} color="#b45309" />
-            <View className="ml-3 flex-1">
-              {urgentTasks.length > 0 && (
-                <Text className="text-sm font-bold text-amber-800">
-                  마감 {urgentLabel === "오늘 마감" ? "오늘" : urgentLabel} · 아직 못 푼 시험{" "}
-                  {urgentTasks.length}개
-                </Text>
-              )}
-              {weekly.lateCount > 0 && (
-                <Text className="text-sm font-bold text-amber-800">
-                  지난 주 시험 {weekly.lateCount}개를 지각 응시할 수 있어요
-                </Text>
-              )}
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#b45309" />
-          </Pressable>
-        )}
-
-        {/* 박스 전체를 누르면 학습 탭(이번 주 시험 목록)으로 이동한다. */}
+        {/* 2. 이번 주 진행률. 누르면 학습 탭으로 이동한다. */}
         <Pressable
           onPress={() => router.push("/study")}
           style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
@@ -231,65 +200,52 @@ export default function HomeScreen() {
           <View className="flex-row items-center justify-between">
             <Text className="text-xl font-bold text-ink">이번 주 진행률</Text>
             <View className="flex-row items-center gap-1">
-              <Text className="text-2xl font-extrabold text-berry">
+              <Text className="text-3xl font-extrabold text-berry">
                 {progressPct}%
               </Text>
               <Ionicons
                 name="chevron-forward"
-                size={22}
+                size={24}
                 color={colors.inkMuted}
               />
             </View>
           </View>
-          <View className="mt-4 h-3 w-full rounded-full bg-blush">
+          <View className="mt-4 h-3.5 w-full rounded-full bg-blush">
             <View
-              className="h-3 rounded-full bg-brand"
+              className="h-3.5 rounded-full bg-brand"
               style={{ width: `${progressPct}%` }}
             />
           </View>
           <Text className="mt-4 text-base text-ink-soft">
             {weekly.total === 0
               ? "이번 주 할 일이 없어요"
-              : `이번 주 시험 ${weekly.total}개 중 ${weekly.done}개 완료`}
-            {weekly.lateCount > 0 ? ` · 지각 응시 ${weekly.lateCount}개` : ""}
-            {weekly.overdueCount > 0
-              ? ` · 기한 초과 ${weekly.overdueCount}개`
-              : ""}
+              : `시험 ${weekly.total}개 중 ${weekly.done}개 완료`}
+            {urgentLabel ? ` · 마감 ${urgentLabel}` : ""}
           </Text>
         </Pressable>
 
-        {/* 연속 학습일과 오늘 푼 문제 수. */}
+        {/* 3. 연속 학습일과 최근 평균 성적을 한 줄에. */}
         {stats && (
-          <View className="mt-4 flex-row items-center rounded-3xl border border-line bg-white px-5 py-4 shadow-sm shadow-brand/20">
-            <View className="h-12 w-12 items-center justify-center rounded-full bg-cream">
-              <Ionicons name="flame" size={26} color={colors.brandDark} />
-            </View>
-            <View className="ml-4 flex-1">
-              <Text className="text-lg font-extrabold text-ink">
-                {stats.streak > 0
-                  ? `${stats.streak}일 연속 학습 중`
-                  : "오늘 학습을 시작해 보세요"}
+          <View className="mt-4 flex-row gap-4">
+            <View className="flex-1 rounded-3xl border border-line bg-white px-5 py-5 shadow-sm shadow-brand/20">
+              <Ionicons name="flame" size={28} color={colors.brandDark} />
+              <Text className="mt-2 text-2xl font-extrabold text-ink">
+                {stats.streak}일
               </Text>
               <Text className="mt-0.5 text-sm text-ink-soft">
                 {stats.streak > 0 && !stats.studiedToday
-                  ? "오늘 학습하면 연속 기록이 이어져요"
-                  : `오늘 푼 문제 ${stats.solvedToday}개`}
+                  ? "오늘 하면 이어져요"
+                  : "연속 학습"}
               </Text>
             </View>
-          </View>
-        )}
-
-        {/* 최근 시험 점수 3개와 평균 변화. 누르면 학습 결과로 이동한다. */}
-        {stats && stats.recent.length > 0 && (
-          <Pressable
-            onPress={() => router.push("/results")}
-            className="mt-4 rounded-3xl border border-line bg-white px-5 py-5 shadow-sm shadow-brand/20 active:opacity-90"
-          >
-            <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-bold text-ink">내 성적</Text>
-              <View className="flex-row items-center gap-2">
-                <Text className="text-base font-extrabold text-berry">
-                  평균 {stats.average}점
+            <Pressable
+              onPress={() => router.push("/results")}
+              className="flex-1 rounded-3xl border border-line bg-white px-5 py-5 shadow-sm shadow-brand/20 active:opacity-90"
+            >
+              <Ionicons name="stats-chart" size={28} color={colors.brandDark} />
+              <View className="mt-2 flex-row items-baseline gap-1.5">
+                <Text className="text-2xl font-extrabold text-ink">
+                  {stats.average !== null ? `${stats.average}점` : "-"}
                 </Text>
                 {scoreDelta !== null && scoreDelta !== 0 && (
                   <Text
@@ -297,54 +253,14 @@ export default function HomeScreen() {
                       scoreDelta > 0 ? "text-emerald-600" : "text-red-500"
                     }`}
                   >
-                    {scoreDelta > 0 ? "▲" : "▼"} {Math.abs(scoreDelta)}
+                    {scoreDelta > 0 ? "▲" : "▼"}
+                    {Math.abs(scoreDelta)}
                   </Text>
                 )}
-                <Ionicons
-                  name="chevron-forward"
-                  size={18}
-                  color={colors.inkMuted}
-                />
               </View>
-            </View>
-            <View className="mt-3 gap-2">
-              {stats.recent.map((item) => {
-                const palette = categoryColors[item.kind];
-                return (
-                  <View
-                    key={item.key}
-                    className="flex-row items-center justify-between"
-                  >
-                    <View className="flex-1 flex-row items-center gap-2">
-                      <View
-                        className="rounded-full px-2 py-0.5"
-                        style={{ backgroundColor: palette.accent }}
-                      >
-                        <Text
-                          className="text-xs font-bold"
-                          style={{ color: palette.fg }}
-                        >
-                          {KIND_LABEL[item.kind]}
-                        </Text>
-                      </View>
-                      <Text
-                        className="flex-1 text-base text-ink"
-                        numberOfLines={1}
-                      >
-                        {item.title}
-                      </Text>
-                    </View>
-                    <Text
-                      className="text-base font-extrabold"
-                      style={{ color: palette.fg }}
-                    >
-                      {item.label}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </Pressable>
+              <Text className="mt-0.5 text-sm text-ink-soft">최근 평균</Text>
+            </Pressable>
+          </View>
         )}
       </ScrollView>
     </View>
