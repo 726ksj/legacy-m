@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
-import { colors } from "../../lib/theme";
+import { categoryColors, colors } from "../../lib/theme";
 import {
   friendlyReviewError,
   GRADUATION_STEPS,
@@ -12,16 +12,16 @@ import {
   startReviewSession,
   type WrongNote,
 } from "../../lib/wrongNotes";
+import { currentWeekOf, fetchWeeklyCourses } from "../../lib/weekly";
 import EmptyState from "../../components/EmptyState";
 import ScreenHeader from "../../components/ScreenHeader";
 
 type Tab = "active" | "graduated";
-type Sort = "count" | "recent" | "week";
+type Sort = "count" | "recent";
 
 const SORT_LABEL: Record<Sort, string> = {
   count: "많이 틀린 순",
   recent: "최근 순",
-  week: "주차 순",
 };
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -121,7 +121,10 @@ export default function WrongAnswersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("active");
   const [sort, setSort] = useState<Sort>("count");
+  // 기본은 이번 주차의 오답. null이면 전체 주차.
   const [week, setWeek] = useState<number | null>(null);
+  const [currentWeek, setCurrentWeek] = useState<number | null>(null);
+  const weekInitialized = useRef(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -133,7 +136,18 @@ export default function WrongAnswersScreen() {
       return;
     }
     try {
-      setNotes(await listWrongNotes());
+      const [loaded, courses] = await Promise.all([
+        listWrongNotes(),
+        fetchWeeklyCourses().catch(() => []),
+      ]);
+      setNotes(loaded);
+      const now = currentWeekOf(courses);
+      setCurrentWeek(now);
+      // 처음 열 때만 이번 주차를 기본으로 고른다(이후엔 사용자가 고른 칩을 유지).
+      if (!weekInitialized.current) {
+        weekInitialized.current = true;
+        if (now !== null) setWeek(now);
+      }
     } catch (e) {
       setError(friendlyReviewError(e));
     }
@@ -160,13 +174,12 @@ export default function WrongAnswersScreen() {
   const graduationPct =
     notes.length === 0 ? 0 : Math.round((graduated.length / notes.length) * 100);
 
-  const weeks = useMemo(
-    () =>
-      [...new Set(notes.map((n) => n.week).filter((w): w is number => w !== null))].sort(
-        (a, b) => a - b,
-      ),
-    [notes],
-  );
+  // 오답이 있는 주차 + 이번 주차(오답이 없어도 칩으로 보여 준다).
+  const weeks = useMemo(() => {
+    const set = new Set(notes.map((n) => n.week).filter((w): w is number => w !== null));
+    if (currentWeek !== null) set.add(currentWeek);
+    return [...set].sort((a, b) => a - b);
+  }, [notes, currentWeek]);
 
   const visible = useMemo(() => {
     const source = (tab === "active" ? active : graduated).filter(
@@ -177,15 +190,34 @@ export default function WrongAnswersScreen() {
       sorted.sort((a, b) => (b.graduated_at ?? "").localeCompare(a.graduated_at ?? ""));
     } else if (sort === "count") {
       sorted.sort((a, b) => b.wrong_count - a.wrong_count || b.last_wrong_at.localeCompare(a.last_wrong_at));
-    } else if (sort === "recent") {
-      sorted.sort((a, b) => b.last_wrong_at.localeCompare(a.last_wrong_at));
     } else {
-      sorted.sort((a, b) => (a.week ?? 99) - (b.week ?? 99) || b.wrong_count - a.wrong_count);
+      sorted.sort((a, b) => b.last_wrong_at.localeCompare(a.last_wrong_at));
     }
     return sorted;
   }, [tab, sort, week, active, graduated]);
 
   const solvable = tab === "active" ? Math.min(visible.length, MAX_REVIEW_QUESTIONS) : 0;
+
+  // 테스트(단어장)별로 묶어서 보여 준다. 처음 나온 순서(정렬 결과)를 유지한다.
+  const sections = useMemo(() => {
+    const map = new Map<string, { title: string; week: number | null; notes: WrongNote[] }>();
+    for (const note of visible) {
+      const entry = map.get(note.vocab_set_id) ?? {
+        title: note.set_title,
+        week: note.week,
+        notes: [],
+      };
+      entry.notes.push(note);
+      map.set(note.vocab_set_id, entry);
+    }
+    return [...map.entries()];
+  }, [visible]);
+
+  // 이번 주차만 보고 있을 때, 다른 주차에 남아 있는 오답(복습을 놓치기 쉬운 것).
+  const otherWeekActive =
+    tab === "active" && week !== null
+      ? active.filter((n) => n.week !== week).length
+      : 0;
 
   const startReview = async () => {
     setStarting(true);
@@ -288,17 +320,40 @@ export default function WrongAnswersScreen() {
                 <View className="flex-row gap-2">
                   <Chip label="전체" selected={week === null} onPress={() => setWeek(null)} />
                   {weeks.map((w) => (
-                    <Chip key={w} label={`${w}주차`} selected={week === w} onPress={() => setWeek(w)} />
+                    <Chip
+                      key={w}
+                      label={w === currentWeek ? `${w}주차 · 이번 주` : `${w}주차`}
+                      selected={week === w}
+                      onPress={() => setWeek(w)}
+                    />
                   ))}
                 </View>
               </ScrollView>
             )}
 
-            <View className="mt-4 gap-3">
+            {otherWeekActive > 0 && (
+              <Pressable
+                onPress={() => setWeek(null)}
+                className="mt-4 flex-row items-center justify-between rounded-2xl bg-amber-50 px-4 py-3"
+              >
+                <Text className="flex-1 text-sm font-bold text-amber-700">
+                  다른 주차에 마스터하지 못한 단어 {otherWeekActive}개가 남아 있어요
+                </Text>
+                <Text className="text-sm font-bold text-amber-700">전체 보기 ›</Text>
+              </Pressable>
+            )}
+
+            <View className="mt-4 gap-5">
               {visible.length === 0 ? (
                 <EmptyState
                   icon={tab === "active" ? "checkmark-circle-outline" : "school-outline"}
-                  title={tab === "active" ? "남은 오답이 없어요" : "아직 마스터한 단어가 없어요"}
+                  title={
+                    tab === "active"
+                      ? week !== null
+                        ? "이 주차에는 남은 오답이 없어요"
+                        : "남은 오답이 없어요"
+                      : "아직 마스터한 단어가 없어요"
+                  }
                   description={
                     tab === "active"
                       ? "모든 오답을 마스터했어요. 잘했어요!"
@@ -306,7 +361,25 @@ export default function WrongAnswersScreen() {
                   }
                 />
               ) : (
-                visible.map((note) => <NoteCard key={note.word_id} note={note} />)
+                sections.map(([setId, section]) => (
+                  <View key={setId} className="gap-3">
+                    <View className="flex-row items-center gap-2">
+                      <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: categoryColors.vocab.accent }}>
+                        <Text className="text-sm font-bold" style={{ color: categoryColors.vocab.fg }}>
+                          단어
+                        </Text>
+                      </View>
+                      <Text className="flex-1 text-base font-bold text-ink-soft">
+                        {section.week ? `${section.week}주차 · ` : ""}
+                        {section.title}
+                      </Text>
+                      <Text className="text-sm font-bold text-ink-soft">{section.notes.length}개</Text>
+                    </View>
+                    {section.notes.map((note) => (
+                      <NoteCard key={note.word_id} note={note} />
+                    ))}
+                  </View>
+                ))
               )}
             </View>
           </ScrollView>

@@ -81,3 +81,14 @@ export function weekDeadline(
   const left = Math.round((end - today) / 86400000);
   return { label: left <= 0 ? "오늘 마감" : `D-${left}`, urgent: left <= 1 };
 }
+
+// 수강 중인 강좌들의 현재 주차 중 가장 큰 값. 모르면 null.
+// (강좌가 여러 개일 때 오답노트처럼 강좌 구분이 없는 화면의 "이번 주" 기준)
+export function currentWeekOf(
+  courses: Pick<WeeklyCourse, "current_week">[],
+): number | null {
+  const weeks = courses
+    .map((course) => course.current_week)
+    .filter((week): week is number => week !== null && week >= 1);
+  return weeks.length > 0 ? Math.max(...weeks) : null;
+}

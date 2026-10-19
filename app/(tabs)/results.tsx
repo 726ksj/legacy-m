@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,9 +8,8 @@ import {
   View,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
-import { colors } from "../../lib/theme";
+import { categoryColors, colors } from "../../lib/theme";
 import {
   fetchCourseResults,
   NO_WEEK,
@@ -20,62 +19,57 @@ import {
 } from "../../lib/results";
 import ScreenHeader from "../../components/ScreenHeader";
 import EmptyState from "../../components/EmptyState";
+import TestResultCard from "../../components/TestResultCard";
 
-// 강좌 기간(1주차~N주차)을 주차별로 나열한다. 주차를 누르면 그 주에 본 시험의 결과를 본다.
-function WeekRow({ course, week }: { course: CourseResults; week: number }) {
-  const tests = testsOfWeek(course, week);
-  const done = tests.filter((t) => t.status === "completed").length;
-  const hasTiming = tests.some((t) => t.timings.length > 0);
-  const isCurrent = week === course.currentWeek;
-  const notStarted =
-    course.currentWeek !== null && week > course.currentWeek && done === 0;
-  const range = week === NO_WEEK ? null : weekRange(course.startDate, week);
+const SECTIONS = [
+  { kind: "vocab", title: "단어 학습" },
+  { kind: "writing", title: "어순 배열" },
+] as const;
 
+function Chip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable
-      onPress={() =>
-        router.push({
-          pathname: "/week-result",
-          params: { course: course.key, week: String(week) },
-        })
-      }
-      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-      className={`flex-row items-center justify-between rounded-3xl border px-5 py-4 ${
-        isCurrent ? "border-brand bg-white" : "border-line bg-white"
-      } ${notStarted ? "opacity-60" : ""}`}
+      onPress={onPress}
+      className={`rounded-full border px-3.5 py-1.5 ${
+        selected ? "border-brand bg-brand" : "border-line bg-white"
+      }`}
     >
-      <View className="flex-1 pr-3">
-        <View className="flex-row items-center gap-2">
-          <Text className="text-lg font-bold text-ink">
-            {week === NO_WEEK ? "주차 미지정" : `${week}주차`}
-          </Text>
-          {isCurrent && (
-            <View className="rounded-full bg-brand px-2 py-0.5">
-              <Text className="text-xs font-bold text-white">이번 주</Text>
-            </View>
-          )}
-          {hasTiming && (
-            <View className="rounded-full bg-amber-100 px-2 py-0.5">
-              <Text className="text-xs font-bold text-amber-700">지각</Text>
-            </View>
-          )}
-        </View>
-        <Text className="mt-1 text-sm text-ink-soft">
-          {range ? `${range} · ` : ""}
-          {tests.length === 0
-            ? notStarted
-              ? "시작 전"
-              : "등록된 시험 없음"
-            : `시험 ${tests.length}개 중 ${done}개 완료`}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.inkMuted} />
+      <Text
+        className={`text-sm font-bold ${selected ? "text-white" : "text-ink-soft"}`}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
+// 처음 보여 줄 주차: 이번 주차. 모르거나 범위를 벗어나면 시험이 있는 가장 최근 주차.
+function defaultWeek(course: CourseResults): number {
+  const { currentWeek, totalWeeks } = course;
+  if (currentWeek !== null && currentWeek >= 1 && currentWeek <= totalWeeks) {
+    return currentWeek;
+  }
+  const withTests = course.tests
+    .map((t) => t.week)
+    .filter((w): w is number => w !== null);
+  if (currentWeek !== null && currentWeek > totalWeeks && totalWeeks >= 1) {
+    return totalWeeks;
+  }
+  return withTests.length > 0 ? Math.max(...withTests) : 1;
+}
+
 export default function ResultsScreen() {
   const [courses, setCourses] = useState<CourseResults[]>([]);
+  const [courseKey, setCourseKey] = useState<string | null>(null);
+  const [week, setWeek] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -102,6 +96,20 @@ export default function ResultsScreen() {
     setRefreshing(false);
   }, [load]);
 
+  // 강좌 선택(첫 강좌가 기본)과 그 강좌의 기본 주차(이번 주)를 정한다.
+  const course = useMemo(
+    () => courses.find((c) => c.key === courseKey) ?? courses[0] ?? null,
+    [courses, courseKey],
+  );
+  useEffect(() => {
+    if (course) setWeek((prev) => prev ?? defaultWeek(course));
+  }, [course]);
+
+  const selectCourse = (c: CourseResults) => {
+    setCourseKey(c.key);
+    setWeek(defaultWeek(c));
+  };
+
   if (loading) {
     return (
       <View className="flex-1 bg-blush">
@@ -112,6 +120,17 @@ export default function ResultsScreen() {
       </View>
     );
   }
+
+  const weeks = course
+    ? Array.from({ length: course.totalWeeks }, (_, i) => i + 1)
+    : [];
+  const hasNoWeek = course ? testsOfWeek(course, NO_WEEK).length > 0 : false;
+  const selectedWeek = week ?? (course ? defaultWeek(course) : 1);
+  const tests = course ? testsOfWeek(course, selectedWeek) : [];
+  const range =
+    course && selectedWeek !== NO_WEEK
+      ? weekRange(course.startDate, selectedWeek)
+      : null;
 
   return (
     <View className="flex-1 bg-blush">
@@ -126,33 +145,94 @@ export default function ResultsScreen() {
           />
         }
       >
-        {courses.length === 0 && (
+        {!course ? (
           <EmptyState
             icon="stats-chart-outline"
             title="아직 학습 기록이 없어요"
             description="수강 중인 강좌의 주차별 결과가 여기에 쌓여요"
           />
-        )}
-
-        {courses.map((course) => {
-          // 1주차부터 강사가 설정한 기간까지. 주차가 지정되지 않은 시험은 맨 아래.
-          const weeks = Array.from(
-            { length: course.totalWeeks },
-            (_, i) => i + 1,
-          );
-          const hasNoWeek = testsOfWeek(course, NO_WEEK).length > 0;
-          return (
-            <View key={course.key} className="mt-6 gap-3">
-              <Text className="text-base font-bold text-ink-soft">
+        ) : (
+          <>
+            {courses.length > 1 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="mt-5"
+              >
+                <View className="flex-row gap-2">
+                  {courses.map((c) => (
+                    <Chip
+                      key={c.key}
+                      label={c.label}
+                      selected={c.key === course.key}
+                      onPress={() => selectCourse(c)}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+            {courses.length === 1 && (
+              <Text className="mt-6 text-base font-bold text-ink-soft">
                 {course.label}
               </Text>
-              {weeks.map((week) => (
-                <WeekRow key={week} course={course} week={week} />
-              ))}
-              {hasNoWeek && <WeekRow course={course} week={NO_WEEK} />}
-            </View>
-          );
-        })}
+            )}
+
+            {/* 이번 주가 기본으로 선택되고, 칩을 눌러 지난 주차의 결과를 본다. */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mt-4"
+            >
+              <View className="flex-row gap-2">
+                {weeks.map((w) => (
+                  <Chip
+                    key={w}
+                    label={w === course.currentWeek ? `${w}주차 · 이번 주` : `${w}주차`}
+                    selected={selectedWeek === w}
+                    onPress={() => setWeek(w)}
+                  />
+                ))}
+                {hasNoWeek && (
+                  <Chip
+                    label="주차 미지정"
+                    selected={selectedWeek === NO_WEEK}
+                    onPress={() => setWeek(NO_WEEK)}
+                  />
+                )}
+              </View>
+            </ScrollView>
+            {range && (
+              <Text className="mt-2 text-sm text-ink-soft">{range}</Text>
+            )}
+
+            {tests.length === 0 ? (
+              <EmptyState
+                icon="document-text-outline"
+                title="이 주차에는 시험이 없어요"
+                description="강사님이 시험을 등록하면 여기에 나타나요"
+              />
+            ) : (
+              SECTIONS.map(({ kind, title }) => {
+                const ofKind = tests.filter((t) => t.kind === kind);
+                if (ofKind.length === 0) return null;
+                const palette = categoryColors[kind];
+                return (
+                  <View key={kind} className="mt-6 gap-3">
+                    <Text
+                      className="text-lg font-extrabold"
+                      style={{ color: palette.fg }}
+                    >
+                      {title}
+                    </Text>
+                    {ofKind.map((test) => (
+                      <TestResultCard key={`${test.kind}:${test.id}`} test={test} />
+                    ))}
+                  </View>
+                );
+              })
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
