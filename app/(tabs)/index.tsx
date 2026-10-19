@@ -108,8 +108,13 @@ export default function HomeScreen() {
   const thisWeekTasks = allTasks.filter(
     ({ task }) => !task.is_late && !task.is_overdue,
   );
-  const previewTasks = thisWeekTasks.slice(0, WEEK_PREVIEW);
-  const hiddenCount = thisWeekTasks.length - previewTasks.length;
+  // 목록에는 이번 주 시험 뒤에 지난 주에 못 끝낸 시험(지각·기한 초과 표시)도 함께 보여 준다.
+  const listTasks = [
+    ...thisWeekTasks,
+    ...allTasks.filter(({ task }) => task.is_late || task.is_overdue),
+  ];
+  const previewTasks = listTasks.slice(0, WEEK_PREVIEW);
+  const hiddenCount = listTasks.length - previewTasks.length;
   const openNext = ({ task }: CourseTask) =>
     router.push(
       task.kind === "vocab" ? `/test/${task.id}` : `/writing/${task.id}`,
@@ -260,13 +265,12 @@ export default function HomeScreen() {
         {/* 오답노트에서 복습할 단어가 몇 개 남았는지 알려 주고 오답 탭으로 보낸다. */}
         <Pressable
           onPress={() => router.push("/wrong")}
-          style={({ pressed }) => ({
-            opacity: pressed ? 0.9 : 1,
+          style={{
             backgroundColor: categoryColors.vocab.bg,
             borderWidth: 1,
             borderColor: categoryColors.vocab.border,
-          })}
-          className="mt-8 flex-row items-center justify-between rounded-3xl px-5 py-4"
+          }}
+          className="mt-8 flex-row items-center justify-between rounded-3xl px-5 py-4 active:opacity-80"
         >
           <View className="flex-1 pr-3">
             <Text
