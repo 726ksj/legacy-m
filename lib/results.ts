@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
-import { fetchWeeklyCourses } from "./weekly";
+import { fetchOrderOverview, type OrderOverviewRow } from "./order";
+import { fetchWeeklyCourses, type TestKind } from "./weekly";
 import type { SetStatus } from "./progress";
 
 export interface TimingTag {
@@ -9,7 +10,7 @@ export interface TimingTag {
 
 // 한 주차에 속한 시험 하나(단어장 또는 어순 배열 세트)와 내 결과.
 export interface WeekTest {
-  kind: "vocab" | "writing";
+  kind: TestKind;
   id: string;
   title: string;
   week: number | null;
@@ -69,6 +70,7 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
     { data: writingResults },
     { data: vocabAttempts },
     { data: writingAttempts },
+    orderOverview,
   ] = await Promise.all([
     fetchWeeklyCourses(),
     supabase
@@ -94,6 +96,9 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
       .from("writing_attempts")
       .select("writing_set_id, is_late, is_overdue")
       .order("started_at", { ascending: true }),
+    // 순서 배열은 정답이 걸려 있어 서버 함수로만 진행 상황을 받는다. 불러오지 못해도
+    // 나머지 결과는 보여 준다.
+    fetchOrderOverview().catch(() => [] as OrderOverviewRow[]),
   ]);
 
   const vocabResultBySet = new Map<
@@ -181,6 +186,25 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
     };
   };
 
+  const orderTest = (row: OrderOverviewRow): WeekTest => {
+    const kind = row.is_overdue ? "overdue" : row.is_late ? "late" : null;
+    return {
+      kind: "order",
+      id: row.id,
+      title: row.title,
+      week: row.week,
+      status: row.completed
+        ? "completed"
+        : row.answered > 0
+          ? "in_progress"
+          : "not_started",
+      scoreLabel: row.completed ? `${row.score}점` : null,
+      detail: row.completed ? `${row.correct}/${row.total}개 정답` : null,
+      date: row.completed_at,
+      timings: kind ? [{ label: TIMING_LABEL[kind], kind }] : [],
+    };
+  };
+
   const finish = (
     base: Omit<CourseResults, "totalWeeks" | "tests">,
     totalWeeks: number | null,
@@ -202,6 +226,9 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
       ...(writingSets ?? [])
         .filter((s) => s.course_id === course.course_id)
         .map(writingTest),
+      ...orderOverview
+        .filter((o) => o.course_id === course.course_id)
+        .map(orderTest),
     ];
     return finish(
       {

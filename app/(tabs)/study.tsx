@@ -7,6 +7,7 @@ import { fetchVocabOverview } from "../../lib/vocab";
 import { fetchVocabStatuses } from "../../lib/progress";
 import {
   fetchWeeklyCourses,
+  type TestKind,
   type WeeklyCourse,
   type WeeklyTask,
 } from "../../lib/weekly";
@@ -23,6 +24,7 @@ interface StudyItem {
 const SECTIONS = [
   { kind: "vocab", title: "단어 학습", empty: "응시할 단어 시험이 없어요" },
   { kind: "writing", title: "어순 배열", empty: "응시할 어순 배열이 없어요" },
+  { kind: "order", title: "순서 배열", empty: "응시할 순서 배열이 없어요" },
 ] as const;
 
 // 학습 유형 한 칸: 이번 주 시험을 앞에, 지난 주에 못 끝낸 시험을 뒤에 한 줄씩 나열한다.
@@ -32,7 +34,7 @@ function Section({
   empty,
   items,
 }: {
-  kind: "vocab" | "writing";
+  kind: TestKind;
   title: string;
   empty: string;
   items: StudyItem[];
@@ -175,13 +177,7 @@ export default function StudyScreen() {
 
         <View className="mt-8 gap-3">
           <ComingSoonCard
-            title="순서 배열"
-            subtitle="지문과 문장의 순서를 맞춰요"
-            colors={categoryColors.order}
-          />
-          <ComingSoonCard
-            title="어법 학습"
-            subtitle="문맥에 맞는 어법을 선택해요"
+            title="문장 배열"
             colors={categoryColors.grammar}
           />
         </View>

@@ -1,9 +1,19 @@
 import { supabase } from "./supabase";
 
+// 시험 종류: 단어, 어순 배열, 순서 배열.
+export type TestKind = "vocab" | "writing" | "order";
+
+// 시험 종류별 풀이 화면 경로.
+export function testRoute(kind: TestKind, id: string) {
+  if (kind === "vocab") return `/test/${id}` as const;
+  if (kind === "writing") return `/writing/${id}` as const;
+  return `/order/${id}` as const;
+}
+
 export type TaskStatus = "not_started" | "in_progress" | "completed";
 
 export interface WeeklyTask {
-  kind: "vocab" | "writing";
+  kind: TestKind;
   id: string;
   title: string;
   week: number | null;
@@ -55,6 +65,7 @@ export function summarizeWeekly(courses: WeeklyCourse[]): WeeklySummary {
 export const KIND_LABEL: Record<WeeklyTask["kind"], string> = {
   vocab: "단어",
   writing: "어순 배열",
+  order: "순서 배열",
 };
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {

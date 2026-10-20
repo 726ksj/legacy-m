@@ -15,7 +15,7 @@ export const colors = {
 // 로고 아이콘의 분홍 그라데이션.
 export const brandGradient = ["#eb89a8", "#df6e92"] as const;
 
-// 학습 유형별 색(화면설계서 기준: 단어 민트, 어순 배열 분홍, 순서 파랑, 어법 보라).
+// 학습 유형별 색(화면설계서 기준: 단어 민트, 어순 배열 분홍, 순서 배열 파랑, 문장 배열 보라).
 // 카드/목록의 배경(bg), 글자(fg), 칩 배경(accent)에 같이 쓴다.
 export const categoryColors = {
   vocab: { bg: "#e9f7f1", fg: "#1f8a5f", accent: "#cbeedd", border: "#a8dcc3" },

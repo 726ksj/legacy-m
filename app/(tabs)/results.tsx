@@ -18,6 +18,7 @@ import TestResultCard from "../../components/TestResultCard";
 const SECTIONS = [
   { kind: "vocab", title: "단어 학습" },
   { kind: "writing", title: "어순 배열" },
+  { kind: "order", title: "순서 배열" },
 ] as const;
 
 function Chip({

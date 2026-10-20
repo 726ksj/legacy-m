@@ -3,17 +3,13 @@ import { Text } from "./AppText";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { categoryColors, colors } from "../lib/theme";
-import type { WeeklyTask } from "../lib/weekly";
+import { testRoute, type WeeklyTask } from "../lib/weekly";
 
 // 학습 목록의 시험 한 줄: 제목과 주차, 이동 화살표만 보여 준다.
 export default function TaskRow({ task }: { task: WeeklyTask }) {
-  // 단어는 민트, 어순 배열은 분홍으로 구분한다.
-  const palette =
-    task.kind === "vocab" ? categoryColors.vocab : categoryColors.writing;
-  const open = () =>
-    router.push(
-      task.kind === "vocab" ? `/test/${task.id}` : `/writing/${task.id}`,
-    );
+  // 단어는 민트, 어순 배열은 분홍, 순서 배열은 파랑으로 구분한다.
+  const palette = categoryColors[task.kind];
+  const open = () => router.push(testRoute(task.kind, task.id));
 
   return (
     <Pressable

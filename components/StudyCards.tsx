@@ -1,14 +1,14 @@
 import { View } from "react-native";
 import { Text } from "./AppText";
 
-// 아직 열리지 않은 학습 유형(순서 배열, 어법 학습)을 보여 주는 카드.
+// 아직 열리지 않은 학습 유형(문장 배열)을 보여 주는 카드.
 export function ComingSoonCard({
   title,
   subtitle,
   colors,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   colors: { bg: string; fg: string; border: string };
 }) {
   return (
@@ -28,7 +28,9 @@ export function ComingSoonCard({
           <Text className="text-sm font-bold text-ink-soft">준비 중</Text>
         </View>
       </View>
-      <Text className="mt-1 text-base text-ink-soft">{subtitle}</Text>
+      {subtitle && (
+        <Text className="mt-1 text-base text-ink-soft">{subtitle}</Text>
+      )}
     </View>
   );
 }

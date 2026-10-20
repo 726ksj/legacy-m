@@ -8,6 +8,7 @@ import {
   fetchWeeklyCourses,
   KIND_LABEL,
   summarizeWeekly,
+  testRoute,
   weekDeadline,
   type WeeklyCourse,
   type WeeklySummary,
@@ -109,8 +110,8 @@ export default function HomeScreen() {
       : null;
   // 진행 중인 단어 시험이 있으면 안 푼 문제로 바로 들어가고, 없으면 시험 화면(회차 선택)으로 간다.
   const openNext = async ({ task }: CourseTask) => {
-    if (task.kind === "writing") {
-      router.push(`/writing/${task.id}`);
+    if (task.kind !== "vocab") {
+      router.push(testRoute(task.kind, task.id));
       return;
     }
     const { data } = await supabase

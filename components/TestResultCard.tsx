@@ -2,7 +2,7 @@ import { Pressable, View } from "react-native";
 import { Text } from "./AppText";
 import { router } from "expo-router";
 import { categoryColors } from "../lib/theme";
-import { KIND_LABEL } from "../lib/weekly";
+import { KIND_LABEL, testRoute } from "../lib/weekly";
 import type { WeekTest } from "../lib/results";
 import StatusChip from "./StatusChip";
 
@@ -20,11 +20,7 @@ export default function TestResultCard({ test }: { test: WeekTest }) {
 
   return (
     <Pressable
-      onPress={() =>
-        router.push(
-          test.kind === "vocab" ? `/test/${test.id}` : `/writing/${test.id}`,
-        )
-      }
+      onPress={() => router.push(testRoute(test.kind, test.id))}
       style={{
         backgroundColor: palette.bg,
         borderWidth: 1,

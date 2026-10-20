@@ -1,8 +1,10 @@
 import { supabase } from "./supabase";
+import { fetchOrderOverview, type OrderOverviewRow } from "./order";
+import type { TestKind } from "./weekly";
 
 export interface RecentScore {
   key: string;
-  kind: "vocab" | "writing";
+  kind: TestKind;
   title: string;
   // 0~100. 어순 배열은 얻은 점수 / 만점으로 환산한다.
   percent: number;
@@ -70,6 +72,7 @@ export async function fetchHomeStats(): Promise<HomeStats> {
     { data: writingAttempts },
     { data: vocabResults },
     { data: writingResults },
+    orderOverview,
   ] = await Promise.all([
     supabase
       .from("vocab_test_attempts")
@@ -95,12 +98,19 @@ export async function fetchHomeStats(): Promise<HomeStats> {
       .order("completed_at", { ascending: false })
       .limit(6)
       .returns<WritingResultRow[]>(),
+    fetchOrderOverview().catch(() => [] as OrderOverviewRow[]),
   ]);
 
   // 학습한 날: 시험이나 문장 풀이를 시작한 날.
   const days = new Set<string>();
   for (const row of vocabAttempts ?? []) days.add(kstDay(row.started_at));
   for (const row of writingAttempts ?? []) days.add(kstDay(row.started_at));
+
+  // 순서 배열은 시도 기록을 직접 읽을 수 없어서, 완료한 날을 학습한 날로 센다.
+  const orderDone = orderOverview.filter(
+    (o) => o.completed && o.completed_at,
+  );
+  for (const o of orderDone) days.add(kstDay(o.completed_at!));
 
   const today = kstDay(new Date().toISOString());
   const studiedToday = days.has(today);
@@ -129,6 +139,16 @@ export async function fetchHomeStats(): Promise<HomeStats> {
         title: r.vocab_sets?.title ?? "단어 테스트",
         percent: Math.round(r.score),
         label: `${Math.round(r.score)}점`,
+      },
+    })),
+    ...orderDone.map((o) => ({
+      date: o.completed_at!,
+      item: {
+        key: `order:${o.id}`,
+        kind: "order" as const,
+        title: o.title,
+        percent: Math.round(o.score ?? 0),
+        label: `${Math.round(o.score ?? 0)}점`,
       },
     })),
     ...(writingResults ?? []).map((r) => {
