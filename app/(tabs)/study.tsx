@@ -14,7 +14,6 @@ import {
 import { categoryColors, colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 import TaskRow from "../../components/TaskRow";
-import { ComingSoonCard } from "../../components/StudyCards";
 
 interface StudyItem {
   task: WeeklyTask;
@@ -25,6 +24,7 @@ const SECTIONS = [
   { kind: "vocab", title: "단어 학습", empty: "응시할 단어 시험이 없어요" },
   { kind: "writing", title: "어순 배열", empty: "응시할 어순 배열이 없어요" },
   { kind: "order", title: "순서 배열", empty: "응시할 순서 배열이 없어요" },
+  { kind: "sentence", title: "문장 배열", empty: "응시할 문장 배열이 없어요" },
 ] as const;
 
 // 학습 유형 한 칸: 이번 주 시험을 앞에, 지난 주에 못 끝낸 시험을 뒤에 한 줄씩 나열한다.
@@ -174,13 +174,6 @@ export default function StudyScreen() {
             items={items.filter(({ task }) => task.kind === section.kind)}
           />
         ))}
-
-        <View className="mt-8 gap-3">
-          <ComingSoonCard
-            title="문장 배열"
-            colors={categoryColors.grammar}
-          />
-        </View>
 
       </ScrollView>
     </View>

@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { fetchOrderOverview, type OrderOverviewRow } from "./order";
+import { fetchSentenceOverview, type SentenceOverviewRow } from "./sentence";
 import type { TestKind } from "./weekly";
 
 export interface RecentScore {
@@ -73,6 +74,7 @@ export async function fetchHomeStats(): Promise<HomeStats> {
     { data: vocabResults },
     { data: writingResults },
     orderOverview,
+    sentenceOverview,
   ] = await Promise.all([
     supabase
       .from("vocab_test_attempts")
@@ -99,6 +101,7 @@ export async function fetchHomeStats(): Promise<HomeStats> {
       .limit(6)
       .returns<WritingResultRow[]>(),
     fetchOrderOverview().catch(() => [] as OrderOverviewRow[]),
+    fetchSentenceOverview().catch(() => [] as SentenceOverviewRow[]),
   ]);
 
   // 학습한 날: 시험이나 문장 풀이를 시작한 날.
@@ -111,6 +114,10 @@ export async function fetchHomeStats(): Promise<HomeStats> {
     (o) => o.completed && o.completed_at,
   );
   for (const o of orderDone) days.add(kstDay(o.completed_at!));
+  const sentenceDone = sentenceOverview.filter(
+    (o) => o.completed && o.completed_at,
+  );
+  for (const o of sentenceDone) days.add(kstDay(o.completed_at!));
 
   const today = kstDay(new Date().toISOString());
   const studiedToday = days.has(today);
@@ -146,6 +153,16 @@ export async function fetchHomeStats(): Promise<HomeStats> {
       item: {
         key: `order:${o.id}`,
         kind: "order" as const,
+        title: o.title,
+        percent: Math.round(o.score ?? 0),
+        label: `${Math.round(o.score ?? 0)}점`,
+      },
+    })),
+    ...sentenceDone.map((o) => ({
+      date: o.completed_at!,
+      item: {
+        key: `sentence:${o.id}`,
+        kind: "sentence" as const,
         title: o.title,
         percent: Math.round(o.score ?? 0),
         label: `${Math.round(o.score ?? 0)}점`,

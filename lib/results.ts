@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { fetchOrderOverview, type OrderOverviewRow } from "./order";
+import { fetchSentenceOverview, type SentenceOverviewRow } from "./sentence";
 import { fetchWeeklyCourses, type TestKind } from "./weekly";
 import type { SetStatus } from "./progress";
 
@@ -71,6 +72,7 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
     { data: vocabAttempts },
     { data: writingAttempts },
     orderOverview,
+    sentenceOverview,
   ] = await Promise.all([
     fetchWeeklyCourses(),
     supabase
@@ -99,6 +101,7 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
     // 순서 배열은 정답이 걸려 있어 서버 함수로만 진행 상황을 받는다. 불러오지 못해도
     // 나머지 결과는 보여 준다.
     fetchOrderOverview().catch(() => [] as OrderOverviewRow[]),
+    fetchSentenceOverview().catch(() => [] as SentenceOverviewRow[]),
   ]);
 
   const vocabResultBySet = new Map<
@@ -205,6 +208,11 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
     };
   };
 
+  const sentenceTest = (row: SentenceOverviewRow): WeekTest => ({
+    ...orderTest(row as unknown as OrderOverviewRow),
+    kind: "sentence",
+  });
+
   const finish = (
     base: Omit<CourseResults, "totalWeeks" | "tests">,
     totalWeeks: number | null,
@@ -229,6 +237,9 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
       ...orderOverview
         .filter((o) => o.course_id === course.course_id)
         .map(orderTest),
+      ...sentenceOverview
+        .filter((o) => o.course_id === course.course_id)
+        .map(sentenceTest),
     ];
     return finish(
       {

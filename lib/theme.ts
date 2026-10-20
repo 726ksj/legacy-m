@@ -26,7 +26,7 @@ export const categoryColors = {
     border: "#eeaac1",
   },
   order: { bg: "#eaf1fb", fg: "#2f5fa8", accent: "#d3e1f5", border: "#b7cbe9" },
-  grammar: {
+  sentence: {
     bg: "#f1eafb",
     fg: "#6c3fa8",
     accent: "#e1d4f5",
