@@ -4,7 +4,7 @@ export interface RecentScore {
   key: string;
   kind: "vocab" | "writing";
   title: string;
-  // 0~100. 서술형은 얻은 점수 / 만점으로 환산한다.
+  // 0~100. 어순 배열은 얻은 점수 / 만점으로 환산한다.
   percent: number;
   label: string;
 }

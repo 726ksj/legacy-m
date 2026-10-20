@@ -25,34 +25,18 @@ const HEADER_TITLE: Record<Mode, string> = {
   memorize: "문장 암기",
   arrange: "배열 풀이",
   result: "정답 확인",
-  summary: "서술형 결과",
+  summary: "어순 배열 결과",
 };
 
-// 배열 단위를 칩으로 보여준다. 핵심 어구는 진한 분홍으로 강조한다.
-function ChunkChips({
-  chunks,
-  keyPhrases,
-}: {
-  chunks: string[];
-  keyPhrases: string[];
-}) {
+// 배열 단위를 칩으로 보여준다.
+function ChunkChips({ chunks }: { chunks: string[] }) {
   return (
     <View className="flex-row flex-wrap gap-2">
-      {chunks.map((chunk, i) => {
-        const isKey = keyPhrases.includes(chunk);
-        return (
-          <View
-            key={i}
-            className={`rounded-xl px-3 py-1.5 ${isKey ? "bg-brand" : "bg-blush"}`}
-          >
-            <Text
-              className={`text-base font-semibold ${isKey ? "text-white" : "text-ink-soft"}`}
-            >
-              {chunk}
-            </Text>
-          </View>
-        );
-      })}
+      {chunks.map((chunk, i) => (
+        <View key={i} className="rounded-xl bg-blush px-3 py-1.5">
+          <Text className="text-base font-semibold text-ink-soft">{chunk}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -290,7 +274,7 @@ export default function WritingStudyScreen() {
                     </View>
                   )}
                 </View>
-                <Text className="mt-3 text-2xl font-bold leading-8 text-ink">
+                <Text className="mt-3 text-xl font-bold leading-7 text-ink">
                   {sentence.korean}
                 </Text>
 
@@ -299,14 +283,11 @@ export default function WritingStudyScreen() {
                     영어 문장
                   </Text>
                 </View>
-                <Text className="mt-3 text-3xl font-extrabold leading-9 text-ink">
+                <Text className="mt-3 text-2xl font-extrabold leading-8 text-ink">
                   {sentence.english}
                 </Text>
                 <View className="mt-5">
-                  <ChunkChips
-                    chunks={sentence.chunks}
-                    keyPhrases={sentence.key_phrases}
-                  />
+                  <ChunkChips chunks={sentence.chunks} />
                 </View>
               </View>
 
@@ -339,7 +320,7 @@ export default function WritingStudyScreen() {
                     {attempt.attempt_no}번째 시도
                   </Text>
                 </View>
-                <Text className="mt-3 text-2xl font-bold leading-8 text-ink">
+                <Text className="mt-3 text-xl font-bold leading-7 text-ink">
                   {attempt.korean}
                 </Text>
               </View>
@@ -492,14 +473,11 @@ export default function WritingStudyScreen() {
                     정답
                   </Text>
                 </View>
-                <Text className="mt-3 text-3xl font-extrabold leading-9 text-ink">
+                <Text className="mt-3 text-2xl font-extrabold leading-8 text-ink">
                   {result.english}
                 </Text>
                 <View className="mt-4">
-                  <ChunkChips
-                    chunks={result.chunks}
-                    keyPhrases={result.key_phrases}
-                  />
+                  <ChunkChips chunks={result.chunks} />
                 </View>
               </View>
 
@@ -531,7 +509,7 @@ export default function WritingStudyScreen() {
                 }}
               >
                 <Text className="text-sm font-bold text-cream">
-                  {progress.passed ? "서술형 통과" : "진행 중"}
+                  {progress.passed ? "어순 배열 통과" : "진행 중"}
                 </Text>
                 <Text className="mt-1 text-5xl font-extrabold text-white">
                   {progress.points} / {progress.max_points}점

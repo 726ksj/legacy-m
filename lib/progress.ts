@@ -45,7 +45,7 @@ export async function fetchVocabStatuses(): Promise<Map<string, SetStatus>> {
   return statuses;
 }
 
-// 어순 배열(서술형) 세트별 상태: 모든 문장을 완성하면 완료와 점수.
+// 어순 배열 세트별 상태: 모든 문장을 완성하면 완료와 점수.
 export async function fetchWritingProgress(): Promise<
   Map<string, WritingSetProgress>
 > {

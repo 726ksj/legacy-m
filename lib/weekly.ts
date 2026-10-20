@@ -54,7 +54,7 @@ export function summarizeWeekly(courses: WeeklyCourse[]): WeeklySummary {
 
 export const KIND_LABEL: Record<WeeklyTask["kind"], string> = {
   vocab: "단어",
-  writing: "서술형",
+  writing: "어순 배열",
 };
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {

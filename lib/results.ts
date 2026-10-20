@@ -7,7 +7,7 @@ export interface TimingTag {
   kind: "late" | "overdue";
 }
 
-// 한 주차에 속한 시험 하나(단어장 또는 서술형 세트)와 내 결과.
+// 한 주차에 속한 시험 하나(단어장 또는 어순 배열 세트)와 내 결과.
 export interface WeekTest {
   kind: "vocab" | "writing";
   id: string;

@@ -8,7 +8,7 @@ const STYLE: Record<SetStatus, { label: string; bg: string; text: string }> = {
   completed: { label: "완료", bg: "bg-white", text: "text-emerald-600" },
 };
 
-// 단어장/서술형 세트의 진행 상태 칩.
+// 단어장/어순 배열 세트의 진행 상태 칩.
 export default function StatusChip({ status }: { status: SetStatus }) {
   const style = STYLE[status];
   return (
