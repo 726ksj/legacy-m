@@ -10,7 +10,7 @@ import { supabase } from "../lib/supabase";
 import { brandGradient, colors } from "../lib/theme";
 
 const EMAIL_DOMAIN = "legacyedu.local";
-const SAVED_USERNAME_KEY = "legacy-voca:saved-username";
+const SAVED_USERNAME_KEY = "legacy-m:saved-username";
 
 function FormInput({
   label,

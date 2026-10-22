@@ -2,6 +2,8 @@
 // 색상은 LEGACY M 로고에서 가져왔다: 분홍 그라데이션(brand), 와인색 글자(berry),
 // 크림색 뇌(cream), 연한 분홍 배경(blush).
 module.exports = {
+  // 웹에서 NativeWind가 'media' 모드일 때 색상 모드를 설정하다 오류가 나서 class 방식으로 둔다(앱은 라이트 고정).
+  darkMode: "class",
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {

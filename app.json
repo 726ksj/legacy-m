@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "LEGACY M",
-    "slug": "legacy-voca",
+    "slug": "legacy-m",
     "version": "1.0.0",
-    "scheme": "legacyvoca",
+    "scheme": "legacym",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
