@@ -1,9 +1,12 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../../lib/theme";
 import { FONT } from "../../components/AppText";
 
 export default function TabsLayout() {
+  // 홈 바/브라우저 하단 툴바 같은 하단 안전 영역만큼 탭바를 키운다.
+  const { bottom } = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -14,8 +17,8 @@ export default function TabsLayout() {
           backgroundColor: "#ffffff",
           borderTopWidth: 1,
           borderTopColor: colors.line,
-          height: 62,
-          paddingBottom: 8,
+          height: 62 + bottom,
+          paddingBottom: 8 + bottom,
           paddingTop: 6,
         },
         tabBarLabelStyle: { fontSize: 13, fontFamily: FONT.bold },
