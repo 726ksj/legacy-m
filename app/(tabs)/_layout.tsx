@@ -6,10 +6,8 @@ import { colors } from "../../lib/theme";
 import { FONT } from "../../components/AppText";
 
 export default function TabsLayout() {
-  // 홈 바 같은 하단 안전 영역만큼 탭바를 키운다. 모바일 웹은 브라우저 하단 툴바가
-  // 안전 영역 값으로 잡히지 않아 탭바 글자를 가리므로 최소 여백을 따로 둔다.
-  const insets = useSafeAreaInsets();
-  const bottom = Platform.OS === "web" ? Math.max(insets.bottom, 22) : insets.bottom;
+  // 홈 바 같은 하단 안전 영역만큼 탭바를 키운다.
+  const { bottom } = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -20,7 +18,8 @@ export default function TabsLayout() {
           backgroundColor: "#ffffff",
           borderTopWidth: 1,
           borderTopColor: colors.line,
-          height: 62 + bottom,
+          // 웹은 아이콘+글자가 62 안에 다 들어가지 않아 아래가 잘려서 조금 더 크게 잡는다.
+          height: (Platform.OS === "web" ? 74 : 62) + bottom,
           paddingBottom: 8 + bottom,
           paddingTop: 6,
         },
