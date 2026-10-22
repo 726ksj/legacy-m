@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { Text } from "../../components/AppText";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -141,7 +141,7 @@ export default function HomeScreen() {
         title="LEGACY M"
         right={
           <Pressable
-            onPress={() => Alert.alert("알림", "새 알림이 없습니다.")}
+            onPress={() => router.push("/notifications")}
             hitSlop={8}
             className="h-9 w-9 items-center justify-center rounded-full bg-white/25"
           >

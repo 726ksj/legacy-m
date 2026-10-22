@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -5,8 +6,10 @@ import { colors } from "../../lib/theme";
 import { FONT } from "../../components/AppText";
 
 export default function TabsLayout() {
-  // 홈 바/브라우저 하단 툴바 같은 하단 안전 영역만큼 탭바를 키운다.
-  const { bottom } = useSafeAreaInsets();
+  // 홈 바 같은 하단 안전 영역만큼 탭바를 키운다. 모바일 웹은 브라우저 하단 툴바가
+  // 안전 영역 값으로 잡히지 않아 탭바 글자를 가리므로 최소 여백을 따로 둔다.
+  const insets = useSafeAreaInsets();
+  const bottom = Platform.OS === "web" ? Math.max(insets.bottom, 22) : insets.bottom;
   return (
     <Tabs
       screenOptions={{

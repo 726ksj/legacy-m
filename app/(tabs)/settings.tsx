@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, View } from "react-native";
 import { Text } from "../../components/AppText";
 import { router } from "expo-router";
 import { supabase } from "../../lib/supabase";
@@ -34,17 +34,20 @@ export default function SettingsScreen() {
     load().finally(() => setLoading(false));
   }, [load]);
 
+  const logout = async () => {
+    await supabase.auth.signOut();
+    router.replace("/login");
+  };
+
+  // Alert.alert는 웹에서 동작하지 않아 웹은 브라우저 확인창을 쓴다.
   const handleLogout = () => {
+    if (Platform.OS === "web") {
+      if (window.confirm("로그아웃 하시겠어요?")) void logout();
+      return;
+    }
     Alert.alert("로그아웃", "로그아웃 하시겠어요?", [
       { text: "취소", style: "cancel" },
-      {
-        text: "로그아웃",
-        style: "destructive",
-        onPress: async () => {
-          await supabase.auth.signOut();
-          router.replace("/login");
-        },
-      },
+      { text: "로그아웃", style: "destructive", onPress: () => void logout() },
     ]);
   };
 
