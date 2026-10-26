@@ -28,7 +28,9 @@ export function Text({
     <RNText
       {...props}
       className={className}
-      style={[{ fontFamily: fontFor(className) }, style]}
+      // 굵기는 폰트 파일이 이미 갖고 있다. font-bold 같은 클래스의 fontWeight가 남으면
+      // 웹/안드로이드가 그 위에 한 번 더 굵게 칠하므로 normal로 덮는다.
+      style={[{ fontFamily: fontFor(className), fontWeight: "normal" }, style]}
     />
   );
 }
