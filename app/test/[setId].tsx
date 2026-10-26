@@ -24,18 +24,26 @@ const TIMING_LABEL = { late: "지각", overdue: "기한 초과" } as const;
 // 기한(주차 종료일)이 걸린 시험은 1차 시험과 2차 시험이고, 재시험에는 별도 기한이 없다.
 const isExamRound = (roundNo: number) => roundNo === 1 || roundNo === 3;
 
+// 시험 회차 한 장. 끝낸 회차는 점수가 있는 작은 줄(눌러서 결과 보기)이고,
+// 지금 응시할 회차(current)는 테두리가 강조된 큰 카드에 시작 버튼이 들어 있다.
 function RoundCard({
   roundNo,
   round,
-  skipped,
   timing,
+  current,
+  actionLabel,
+  starting,
+  onStart,
   onPress,
 }: {
   roundNo: number;
   round: TestRound | undefined;
-  skipped: boolean;
   // 응시한 회차는 그 회차의 기록, 아직 안 푼 시험은 지금 시작하면 적용될 값.
   timing: Timing;
+  current: boolean;
+  actionLabel: string;
+  starting: boolean;
+  onStart: () => void;
   // 응시를 마친 회차만 눌러서 틀린 문제를 볼 수 있다.
   onPress?: () => void;
 }) {
@@ -50,8 +58,56 @@ function RoundCard({
     badge = "진행 중";
     badgeBg = "bg-amber-100";
     badgeText = "text-amber-700";
-  } else if (skipped) {
-    badge = "생략";
+  }
+
+  if (current) {
+    return (
+      <View
+        className="rounded-3xl bg-white px-5 py-5 shadow-md shadow-brand/30"
+        style={{ borderWidth: 2, borderColor: colors.brand }}
+      >
+        <View className="flex-row items-center gap-2">
+          <View className="rounded-full bg-brand px-2.5 py-0.5">
+            <Text className="text-xs font-bold text-white">지금 응시</Text>
+          </View>
+          {timing && (
+            <View
+              className={`rounded-full px-2 py-0.5 ${
+                timing === "overdue" ? "bg-red-100" : "bg-amber-100"
+              }`}
+            >
+              <Text
+                className={`text-xs font-bold ${
+                  timing === "overdue" ? "text-red-600" : "text-amber-700"
+                }`}
+              >
+                {TIMING_LABEL[timing]}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text className="mt-2 text-2xl font-extrabold text-ink">
+          {ROUND_TITLE[roundNo]}
+        </Text>
+        <Text className="mt-1 text-sm text-ink-soft">
+          {round?.status === "in_progress"
+            ? "풀던 시험을 이어서 풀어요"
+            : (RETEST_DESCRIPTION[roundNo] ?? "4지선다로 풀어요")}
+        </Text>
+        <Pressable
+          onPress={onStart}
+          disabled={starting}
+          style={({ pressed }) => ({ opacity: pressed || starting ? 0.8 : 1 })}
+          className="mt-4 items-center rounded-2xl bg-brand py-4 shadow-md shadow-brand/40"
+        >
+          {starting ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text className="text-lg font-bold text-white">{actionLabel}</Text>
+          )}
+        </Pressable>
+      </View>
+    );
   }
 
   return (
@@ -85,12 +141,7 @@ function RoundCard({
         <Text className="mt-1 text-sm text-ink-soft">
           {round
             ? `${round.correct_count ?? 0} / ${round.total_count} 정답`
-            : skipped
-              ? "틀린 단어가 없어 건너뛰었어요"
-              : timing
-                ? "기한이 지나 지금 응시하면 " +
-                  `${TIMING_LABEL[timing]}(으)로 표시돼요`
-                : (RETEST_DESCRIPTION[roundNo] ?? "아직 시작하지 않았어요")}
+            : (RETEST_DESCRIPTION[roundNo] ?? "아직 시작하지 않았어요")}
         </Text>
       </View>
       <View className="flex-row items-center gap-1">
@@ -156,10 +207,6 @@ export default function TestOverviewScreen() {
   const inProgress = status?.rounds.find(
     (round) => round.status === "in_progress",
   );
-  const round1 = status?.rounds.find((round) => round.round_no === 1);
-  const round2 = status?.rounds.find((round) => round.round_no === 2);
-  const round2Skipped =
-    round1?.status === "completed" && !round2 && status?.next_round === 3;
   // 아직 시작하지 않은 시험(1차·2차). 기한이 지났다면 지각 안내 대상이다.
   const pendingExams = [1, 3].filter(
     (n) => !status?.rounds.some((round) => round.round_no === n),
@@ -220,9 +267,6 @@ export default function TestOverviewScreen() {
             <Text className="text-2xl font-extrabold text-ink">
               {title || "단어장"}
             </Text>
-            <Text className="mt-1 text-sm text-ink-soft">
-              4지선다 · 보기를 고른 뒤 확인을 누르면 확정되고 수정할 수 없어요
-            </Text>
           </View>
 
           {error && (
@@ -261,12 +305,10 @@ export default function TestOverviewScreen() {
           {status && (
             <>
               <View className="gap-3">
-                {/* 1차 시험·2차 시험은 항상 보이고, 재시험은 진행됐거나 다음 차례일 때만 보인다(1차를 다 맞으면 1차 재시험은 나오지 않는다). */}
+                {/* 응시한 회차(끝낸 것)와 지금 응시할 회차만 순서대로 보인다. 아직 오지 않은 회차와 건너뛴 재시험은 나오지 않는다. */}
                 {[1, 2, 3, 4, 5]
                   .filter(
                     (roundNo) =>
-                      roundNo === 1 ||
-                      roundNo === 3 ||
                       status.rounds.some(
                         (round) => round.round_no === roundNo,
                       ) ||
@@ -279,7 +321,15 @@ export default function TestOverviewScreen() {
                       round={status.rounds.find(
                         (round) => round.round_no === roundNo,
                       )}
-                      skipped={roundNo === 2 && round2Skipped}
+                      current={
+                        !allDone &&
+                        (inProgress
+                          ? inProgress.round_no === roundNo
+                          : status.next_round === roundNo)
+                      }
+                      actionLabel={primaryLabel}
+                      starting={starting}
+                      onStart={onPrimary}
                       onPress={(() => {
                         const done = status.rounds.find(
                           (round) =>
@@ -299,25 +349,6 @@ export default function TestOverviewScreen() {
                     />
                   ))}
               </View>
-
-              {!allDone && (
-                <Pressable
-                  onPress={onPrimary}
-                  disabled={starting}
-                  style={({ pressed }) => ({
-                    opacity: pressed || starting ? 0.8 : 1,
-                  })}
-                  className="items-center rounded-2xl bg-brand py-4 shadow-md shadow-brand/40"
-                >
-                  {starting ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text className="text-lg font-bold text-white">
-                      {primaryLabel}
-                    </Text>
-                  )}
-                </Pressable>
-              )}
             </>
           )}
         </ScrollView>
