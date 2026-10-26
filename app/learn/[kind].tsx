@@ -16,8 +16,6 @@ import { testRoute, type WeeklyTask } from "../../lib/weekly";
 import { categoryColors, colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 
-type Tab = "memorize" | "test";
-
 const KIND_ICON = {
   vocab: "book",
   writing: "reorder-three",
@@ -25,18 +23,27 @@ const KIND_ICON = {
   sentence: "chatbox-ellipses",
 } as const;
 
-// 암기 목록에서 처음 보여 주는 주차 수. 나머지는 "이전 주차 더 보기"로 펼친다.
+// 처음 보여 주는 주차 수. 응시할 시험이 남은 주차는 항상 보이고, 나머지는 "더 보기"로 펼친다.
 const VISIBLE_WEEKS = 2;
 
-// 학습 유형 화면: 위의 요약과 [암기 | 시험] 탭으로 나눠 보여 준다.
-// 암기 화면은 지금 단어(VOCA)에만 있고, 나머지 유형은 준비 중이다.
+// 암기와 시험을 세트로 묶은 한 줄: 단어장 하나 = 암기 + 그 단어장의 시험.
+// task가 null이면 시험을 이미 끝낸 것(학습 결과로 넘어감).
+interface Entry {
+  id: string;
+  title: string;
+  week: number | null;
+  task: WeeklyTask | null;
+  canMemorize: boolean;
+}
+
+// 학습 유형 화면: 요약 카드 아래에 주차별로 [암기 + 시험] 세트를 나열한다.
+// 암기 화면은 지금 단어(VOCA)에만 있고, 나머지 유형은 시험만 있다.
 export default function LearnKindScreen() {
   const { kind: kindParam } = useLocalSearchParams<{ kind: string }>();
   const kind = isTestKind(kindParam) ? kindParam : null;
 
   const [tests, setTests] = useState<StudyItem[]>([]);
   const [memorize, setMemorize] = useState<MemorizeSet[]>([]);
-  const [tab, setTab] = useState<Tab | null>(null);
   const [showAllWeeks, setShowAllWeeks] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,11 +65,8 @@ export default function LearnKindScreen() {
         fetchStudyItems(),
         kind === "vocab" ? fetchMemorizeSets() : Promise.resolve([]),
       ]);
-      const mine = items.filter(({ task }) => task.kind === kind);
-      setTests(mine);
+      setTests(items.filter(({ task }) => task.kind === kind));
       setMemorize(sets);
-      // 처음 들어올 때만: 응시할 시험이 있으면 시험 탭, 없으면 암기 탭부터 보여 준다.
-      setTab((current) => current ?? (mine.length > 0 ? "test" : "memorize"));
     } catch {
       setError("학습 목록을 불러오지 못했어요.");
     }
@@ -80,27 +84,37 @@ export default function LearnKindScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // 이번 주 시험, 지난 주에 못 끝낸 시험(지각·기한 초과) 순으로 나눈다.
-  const { current, past } = useMemo(
-    () => ({
-      current: tests.filter(({ task }) => !task.is_late && !task.is_overdue),
-      past: tests.filter(({ task }) => task.is_late || task.is_overdue),
-    }),
-    [tests],
-  );
+  const entries = useMemo<Entry[]>(() => {
+    const taskById = new Map(tests.map(({ task }) => [task.id, task]));
+    const list: Entry[] = memorize.map((set) => ({
+      id: set.id,
+      title: set.title,
+      week: set.week,
+      task: taskById.get(set.id) ?? null,
+      canMemorize: true,
+    }));
+    // 암기 목록에 없는 시험(단어 외 유형 포함)도 빠짐없이 넣는다.
+    const known = new Set(list.map((e) => e.id));
+    for (const { task } of tests) {
+      if (!known.has(task.id)) {
+        list.push({ id: task.id, title: task.title, week: task.week, task, canMemorize: false });
+      }
+    }
+    return list;
+  }, [tests, memorize]);
 
-  // 암기 단어장은 최신 주차부터 주차별로 묶는다(주차 없는 것은 맨 뒤).
+  // 최신 주차부터 주차별로 묶는다(주차 없는 것은 맨 뒤).
   const weekGroups = useMemo(() => {
-    const byWeek = new Map<number | null, MemorizeSet[]>();
-    for (const set of memorize) {
-      byWeek.set(set.week, [...(byWeek.get(set.week) ?? []), set]);
+    const byWeek = new Map<number | null, Entry[]>();
+    for (const entry of entries) {
+      byWeek.set(entry.week, [...(byWeek.get(entry.week) ?? []), entry]);
     }
     return [...byWeek.entries()].sort(([a], [b]) => {
       if (a === null) return 1;
       if (b === null) return -1;
       return b - a;
     });
-  }, [memorize]);
+  }, [entries]);
 
   if (!kind) {
     return (
@@ -127,8 +141,12 @@ export default function LearnKindScreen() {
     );
   }
 
-  const activeTab = tab ?? "test";
-  const visibleGroups = showAllWeeks ? weekGroups : weekGroups.slice(0, VISIBLE_WEEKS);
+  const pastCount = tests.filter(({ task }) => task.is_late || task.is_overdue).length;
+  const visibleGroups = showAllWeeks
+    ? weekGroups
+    : weekGroups.filter(
+        ([, group], i) => i < VISIBLE_WEEKS || group.some((entry) => entry.task !== null),
+      );
   const hiddenWeeks = weekGroups.length - visibleGroups.length;
 
   return (
@@ -165,207 +183,113 @@ export default function LearnKindScreen() {
               {tests.length > 0 ? `응시할 시험 ${tests.length}개` : "응시할 시험이 없어요"}
             </Text>
             <Text className="mt-0.5 text-base text-ink-soft">
-              {past.length > 0
-                ? `지난 주에 못 끝낸 시험 ${past.length}개`
-                : kind === "vocab"
-                  ? `암기할 단어장 ${memorize.length}개`
-                  : "차근차근 풀어 보세요"}
+              {pastCount > 0
+                ? `지난 주에 못 끝낸 시험 ${pastCount}개`
+                : "끝낸 시험은 학습 결과에서 볼 수 있어요"}
             </Text>
           </View>
         </View>
 
-        <View className="mt-5 flex-row rounded-2xl border border-line bg-white p-1">
-          {(
-            [
-              { key: "memorize", label: "암기", count: 0 },
-              { key: "test", label: "시험", count: tests.length },
-            ] as const
-          ).map((item) => {
-            const active = activeTab === item.key;
-            return (
-              <Pressable
-                key={item.key}
-                onPress={() => setTab(item.key)}
-                className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-3"
-                style={{ backgroundColor: active ? palette.fg : "transparent" }}
-              >
-                <Text
-                  className="text-base font-bold"
-                  style={{ color: active ? "#ffffff" : colors.inkSoft }}
-                >
-                  {item.label}
-                </Text>
-                {item.count > 0 && (
-                  <View
-                    className="h-5 min-w-[20px] items-center justify-center rounded-full px-1.5"
-                    style={{ backgroundColor: active ? "rgba(255,255,255,0.28)" : palette.accent }}
-                  >
-                    <Text
-                      className="text-xs font-bold"
-                      style={{ color: active ? "#ffffff" : palette.fg }}
-                    >
-                      {item.count}
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
+        <View className="mt-6 gap-6">
+          {entries.length === 0 && (
+            <View className="items-center rounded-3xl border border-line bg-white px-6 py-10">
+              <Ionicons name="checkmark-circle-outline" size={34} color={colors.inkMuted} />
+              <Text className="mt-3 text-lg text-ink-soft">아직 올라온 학습이 없어요</Text>
+            </View>
+          )}
+          {visibleGroups.map(([week, group]) => (
+            <View key={week ?? "none"} className="gap-3">
+              <Text className="px-1 text-base font-bold text-ink-soft">
+                {week !== null ? `${week}주차` : "주차 미지정"}
+              </Text>
+              {group.map((entry) => (
+                <EntryCard key={entry.id} entry={entry} kind={kind} />
+              ))}
+            </View>
+          ))}
+          {hiddenWeeks > 0 && (
+            <Pressable
+              onPress={() => setShowAllWeeks(true)}
+              className="flex-row items-center justify-center gap-1 rounded-2xl border border-line bg-white py-3.5"
+            >
+              <Text className="text-base font-bold text-ink-soft">
+                이전 주차 {hiddenWeeks}개 더 보기
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={colors.inkSoft} />
+            </Pressable>
+          )}
         </View>
-
-        {activeTab === "memorize" ? (
-          <View className="mt-5 gap-5">
-            {kind !== "vocab" && (
-              <EmptyBox icon="construct-outline" text="암기 화면을 준비 중이에요" />
-            )}
-            {kind === "vocab" && memorize.length === 0 && (
-              <EmptyBox icon="book-outline" text="암기할 단어장이 없어요" />
-            )}
-            {visibleGroups.map(([week, sets]) => (
-              <View key={week ?? "none"} className="gap-2.5">
-                <SectionLabel text={week !== null ? `${week}주차` : "주차 미지정"} />
-                {sets.map((set) => (
-                  <ItemRow
-                    key={set.id}
-                    kind={kind}
-                    title={set.title}
-                    onPress={() => router.push(`/memorize/${set.id}`)}
-                  />
-                ))}
-              </View>
-            ))}
-            {hiddenWeeks > 0 && (
-              <Pressable
-                onPress={() => setShowAllWeeks(true)}
-                className="flex-row items-center justify-center gap-1 rounded-2xl border border-line bg-white py-3.5"
-              >
-                <Text className="text-base font-bold text-ink-soft">
-                  이전 주차 {hiddenWeeks}개 더 보기
-                </Text>
-                <Ionicons name="chevron-down" size={18} color={colors.inkSoft} />
-              </Pressable>
-            )}
-          </View>
-        ) : (
-          <View className="mt-5 gap-5">
-            {tests.length === 0 && (
-              <EmptyBox
-                icon="checkmark-circle-outline"
-                text="응시할 시험이 없어요"
-                hint="끝낸 시험은 학습 결과에서 볼 수 있어요"
-              />
-            )}
-            {current.length > 0 && (
-              <View className="gap-2.5">
-                <SectionLabel text="이번 주 시험" />
-                {current.map(({ task }) => (
-                  <TestRow key={`${task.kind}:${task.id}`} task={task} kind={kind} />
-                ))}
-              </View>
-            )}
-            {past.length > 0 && (
-              <View className="gap-2.5">
-                <SectionLabel text="지난 주에 못 끝낸 시험" tone="warn" />
-                {past.map(({ task }) => (
-                  <TestRow key={`${task.kind}:${task.id}`} task={task} kind={kind} />
-                ))}
-              </View>
-            )}
-          </View>
-        )}
       </ScrollView>
     </View>
   );
 }
 
-function SectionLabel({ text, tone }: { text: string; tone?: "warn" }) {
-  return (
-    <Text
-      className="px-1 text-base font-bold"
-      style={{ color: tone === "warn" ? "#c2410c" : colors.inkSoft }}
-    >
-      {text}
-    </Text>
-  );
-}
-
-function EmptyBox({
-  icon,
-  text,
-  hint,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  text: string;
-  hint?: string;
-}) {
-  return (
-    <View className="items-center rounded-3xl border border-line bg-white px-6 py-10">
-      <Ionicons name={icon} size={34} color={colors.inkMuted} />
-      <Text className="mt-3 text-lg text-ink-soft">{text}</Text>
-      {hint && <Text className="mt-1 text-sm text-ink-soft">{hint}</Text>}
-    </View>
-  );
-}
-
-// 암기/시험 공통 한 줄: 유형 색 아이콘 + 제목 + (뱃지) + 화살표.
-function ItemRow({
-  kind,
-  title,
-  subtitle,
-  badge,
-  onPress,
-}: {
-  kind: keyof typeof categoryColors;
-  title: string;
-  subtitle?: string;
-  badge?: { label: string; fg: string; bg: string };
-  onPress: () => void;
-}) {
+// 세트 카드: 제목 + 상태 뱃지, 아래에 [암기] [시험] 버튼.
+function EntryCard({ entry, kind }: { entry: Entry; kind: keyof typeof categoryColors }) {
   const palette = categoryColors[kind];
-  return (
-    <Pressable
-      onPress={onPress}
-      className="flex-row items-center rounded-2xl border border-line bg-white px-4 py-4 active:opacity-80"
-    >
-      <View
-        className="h-11 w-11 items-center justify-center rounded-xl"
-        style={{ backgroundColor: palette.bg }}
-      >
-        <Ionicons name={KIND_ICON[kind]} size={22} color={palette.fg} />
-      </View>
-      <View className="ml-3 flex-1 pr-2">
-        <Text className="text-lg font-bold text-ink" numberOfLines={2}>
-          {title}
-        </Text>
-        {subtitle && <Text className="mt-0.5 text-sm text-ink-soft">{subtitle}</Text>}
-      </View>
-      {badge && (
-        <View className="mr-2 rounded-full px-2.5 py-1" style={{ backgroundColor: badge.bg }}>
-          <Text className="text-xs font-bold" style={{ color: badge.fg }}>
-            {badge.label}
-          </Text>
-        </View>
-      )}
-      <Ionicons name="chevron-forward" size={20} color={colors.inkMuted} />
-    </Pressable>
-  );
-}
-
-function TestRow({ task, kind }: { task: WeeklyTask; kind: keyof typeof categoryColors }) {
-  const badge = task.is_overdue
+  const { task } = entry;
+  const badge = task?.is_overdue
     ? { label: "기한 초과", fg: "#b91c1c", bg: "#fee2e2" }
-    : task.is_late
+    : task?.is_late
       ? { label: "지각 응시", fg: "#c2410c", bg: "#ffedd5" }
-      : task.status === "in_progress"
-        ? { label: "진행 중", fg: categoryColors[kind].fg, bg: categoryColors[kind].accent }
+      : task?.status === "in_progress"
+        ? { label: "진행 중", fg: palette.fg, bg: palette.accent }
         : undefined;
+  const testLabel = !task ? "시험 완료" : task.status === "in_progress" ? "이어서 하기" : "시험 보기";
+
   return (
-    <ItemRow
-      kind={kind}
-      title={task.title}
-      subtitle={task.week !== null ? `${task.week}주차` : undefined}
-      badge={badge}
-      onPress={() => router.push(testRoute(task.kind, task.id))}
-    />
+    <View className="rounded-3xl border border-line bg-white p-4">
+      <View className="flex-row items-center">
+        <View
+          className="h-11 w-11 items-center justify-center rounded-xl"
+          style={{ backgroundColor: palette.bg }}
+        >
+          <Ionicons name={KIND_ICON[kind]} size={22} color={palette.fg} />
+        </View>
+        <Text className="ml-3 flex-1 text-lg font-bold text-ink" numberOfLines={2}>
+          {entry.title}
+        </Text>
+        {badge && (
+          <View className="ml-2 rounded-full px-2.5 py-1" style={{ backgroundColor: badge.bg }}>
+            <Text className="text-xs font-bold" style={{ color: badge.fg }}>
+              {badge.label}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View className="mt-4 flex-row gap-2.5">
+        {entry.canMemorize && (
+          <Pressable
+            onPress={() => router.push(`/memorize/${entry.id}`)}
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3.5 active:opacity-80"
+            style={{ backgroundColor: palette.bg, borderWidth: 1, borderColor: palette.border }}
+          >
+            <Ionicons name="reader-outline" size={18} color={palette.fg} />
+            <Text className="text-base font-bold" style={{ color: palette.fg }}>
+              암기
+            </Text>
+          </Pressable>
+        )}
+        <Pressable
+          disabled={!task}
+          onPress={() => task && router.push(testRoute(task.kind, task.id))}
+          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3.5 active:opacity-80"
+          style={{ backgroundColor: task ? palette.fg : "#ece6e9" }}
+        >
+          <Ionicons
+            name={task ? "create-outline" : "checkmark-circle"}
+            size={18}
+            color={task ? "#ffffff" : colors.inkMuted}
+          />
+          <Text
+            className="text-base font-bold"
+            style={{ color: task ? "#ffffff" : colors.inkMuted }}
+          >
+            {testLabel}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }

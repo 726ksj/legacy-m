@@ -73,7 +73,7 @@ export default function MemorizeScreen() {
         back
         right={
           words.length > 0 ? (
-            <View className="rounded-full bg-white/25 px-2.5 py-1">
+            <View className="min-w-[72px] items-center rounded-full bg-white/25 px-2.5 py-1">
               <Text className="text-sm font-bold text-white">
                 {index + 1} / {words.length}
               </Text>
@@ -93,12 +93,12 @@ export default function MemorizeScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerClassName="px-6 py-6 gap-5">
-          <View className="flex-row items-center justify-between">
-            <Text className="flex-1 text-base font-bold text-ink-soft">
-              {title}
-            </Text>
-          </View>
+        // 카드 영역만 남는 높이를 채우고(내용이 길면 카드 안에서 스크롤), 진행 바와
+        // 이전/다음 버튼은 단어가 바뀌어도 같은 자리에 고정한다.
+        <View className="flex-1 gap-4 px-6 pb-6 pt-5">
+          <Text className="text-base font-bold text-ink-soft" numberOfLines={1}>
+            {title}
+          </Text>
 
           <View className="h-2 rounded-full bg-white">
             <View
@@ -111,13 +111,14 @@ export default function MemorizeScreen() {
           </View>
 
           <View
-            className="rounded-3xl px-6 py-10"
+            className="flex-1 overflow-hidden rounded-3xl"
             style={{
               backgroundColor: categoryColors.vocab.bg,
               borderWidth: 1,
               borderColor: categoryColors.vocab.border,
             }}
           >
+           <ScrollView contentContainerClassName="px-6 py-8">
             <Text className="text-center text-5xl font-extrabold text-ink">
               {word.word}
             </Text>
@@ -149,6 +150,7 @@ export default function MemorizeScreen() {
                 )}
               </View>
             )}
+           </ScrollView>
           </View>
 
           <View className="flex-row gap-3">
@@ -175,7 +177,7 @@ export default function MemorizeScreen() {
               )}
             </Pressable>
           </View>
-        </ScrollView>
+        </View>
       )}
     </View>
   );
