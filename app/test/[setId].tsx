@@ -147,7 +147,7 @@ function RoundCard({
         </Text>
       </View>
       <View className="flex-row items-center gap-1">
-        <View className={`rounded-full px-3 py-1 ${badgeBg}`}>
+        <View className={`min-w-[72px] items-center rounded-full px-3 py-1 ${badgeBg}`}>
           <Text className={`text-sm font-bold ${badgeText}`}>{badge}</Text>
         </View>
         {onPress && (

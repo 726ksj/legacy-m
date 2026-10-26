@@ -3,24 +3,17 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "
 import { Text } from "../../components/AppText";
 import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../../lib/supabase";
-import { categoryColors, colors } from "../../lib/theme";
+import { colors } from "../../lib/theme";
 import {
   fetchCourseResults,
   NO_WEEK,
   testsOfWeek,
-  weekRange,
   type CourseResults,
 } from "../../lib/results";
+import { KINDS } from "../../lib/study";
 import ScreenHeader from "../../components/ScreenHeader";
 import EmptyState from "../../components/EmptyState";
-import TestResultCard from "../../components/TestResultCard";
-
-const SECTIONS = [
-  { kind: "vocab", title: "단어(VOCA)" },
-  { kind: "writing", title: "어순 배열" },
-  { kind: "order", title: "순서 배열" },
-  { kind: "sentence", title: "문장 배열" },
-] as const;
+import KindCard from "../../components/KindCard";
 
 function Chip({
   label,
@@ -62,11 +55,11 @@ function defaultWeek(course: CourseResults): number {
   return withTests.length > 0 ? Math.max(...withTests) : 1;
 }
 
+// 학습 결과 허브: 주차를 고르고, 학습처럼 유형 카드를 눌러 그 주차의 결과를 본다.
 export default function ResultsScreen() {
   const [courses, setCourses] = useState<CourseResults[]>([]);
   const [courseKey, setCourseKey] = useState<string | null>(null);
   const [week, setWeek] = useState<number | null>(null);
-  const [kind, setKind] = useState<(typeof SECTIONS)[number]["kind"]>("vocab");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -124,13 +117,6 @@ export default function ResultsScreen() {
   const hasNoWeek = course ? testsOfWeek(course, NO_WEEK).length > 0 : false;
   const selectedWeek = week ?? (course ? defaultWeek(course) : 1);
   const tests = course ? testsOfWeek(course, selectedWeek) : [];
-  const kindTests = tests.filter((t) => t.kind === kind);
-  const kindPalette = categoryColors[kind];
-  const kindTitle = SECTIONS.find((s) => s.kind === kind)?.title ?? "";
-  const range =
-    course && selectedWeek !== NO_WEEK
-      ? weekRange(course.startDate, selectedWeek)
-      : null;
 
   return (
     <View className="flex-1 bg-blush">
@@ -177,32 +163,7 @@ export default function ResultsScreen() {
               </Text>
             )}
 
-            {/* 시험 종류(단어/어순/순서/문장)를 먼저 고르고, 아래에서 주차를 고른다. */}
-            <View className="mt-5 flex-row rounded-2xl border border-line bg-white p-1">
-              {SECTIONS.map((s) => {
-                const active = kind === s.kind;
-                return (
-                  <Pressable
-                    key={s.kind}
-                    onPress={() => setKind(s.kind)}
-                    className="flex-1 items-center justify-center rounded-xl py-2.5"
-                    style={{
-                      backgroundColor: active ? categoryColors[s.kind].fg : "transparent",
-                    }}
-                  >
-                    <Text
-                      className="text-sm font-bold"
-                      style={{ color: active ? "#ffffff" : colors.inkSoft }}
-                      numberOfLines={1}
-                    >
-                      {s.title}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* 이번 주가 기본으로 선택되고, 칩을 눌러 지난 주차의 결과를 본다. */}
+            {/* 학습 화면의 안내 문구 자리: 지금 선택된 주차(기본은 이번 주)를 칩으로 보여 주고 바꿀 수 있다. */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -226,23 +187,28 @@ export default function ResultsScreen() {
                 )}
               </View>
             </ScrollView>
-            {range && (
-              <Text className="mt-2 text-sm text-ink-soft">{range}</Text>
-            )}
 
-            {kindTests.length === 0 ? (
-              <EmptyState
-                icon="document-text-outline"
-                title={`이 주차에는 ${kindTitle} 시험이 없어요`}
-                description="강사님이 시험을 등록하면 여기에 나타나요"
-              />
-            ) : (
-              <View className="mt-5 gap-3">
-                {kindTests.map((test) => (
-                  <TestResultCard key={`${test.kind}:${test.id}`} test={test} />
-                ))}
-              </View>
-            )}
+            <View className="mt-4 gap-4">
+              {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
+                <View key={row[0]} className="flex-row gap-4">
+                  {row.map((kind) => {
+                    const count = tests.filter((t) => t.kind === kind).length;
+                    return (
+                      <KindCard
+                        key={kind}
+                        kind={kind}
+                        subtitle={count > 0 ? `시험 ${count}개` : "시험 없음"}
+                        onPress={() =>
+                          router.push(
+                            `/week-results/${kind}?course=${encodeURIComponent(course.key)}&week=${selectedWeek}` as never,
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
           </>
         )}
       </ScrollView>

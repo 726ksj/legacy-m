@@ -68,7 +68,7 @@ export const ROUND_TITLE: Record<number, string> = {
 export const RETEST_DESCRIPTION: Record<number, string> = {
   2: "1차 시험에서 틀린 단어만 다시 풀어요",
   4: "2차 시험에서 틀린 단어만 다시 풀어요",
-  5: "두 번 이상 틀린 단어만 마지막으로 다시 풀어요",
+  5: "1차·2차 시험에서 모두 틀린 단어만 마지막으로 다시 풀어요",
 };
 
 // 다음 시험을 시작하는 버튼 문구.

@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../lib/supabase";
 import { brandGradient, colors } from "../../lib/theme";
 import AnswerActions from "../../components/AnswerActions";
+import AttemptReview from "../../components/AttemptReview";
 import ChoiceButton from "../../components/ChoiceButton";
 import ScreenHeader from "../../components/ScreenHeader";
 import {
@@ -72,49 +73,7 @@ function ResultView({ attempt }: { attempt: Attempt }) {
         </Text>
       </LinearGradient>
 
-      {status?.total_score !== null && status?.total_score !== undefined && (
-        <View className="rounded-3xl border border-line bg-cream/40 px-5 py-4">
-          <Text className="text-sm font-bold text-berry">최종 결과</Text>
-          <Text className="mt-1 text-3xl font-extrabold text-ink">
-            종합 {status.total_score}점
-          </Text>
-          <Text className="mt-1 text-sm text-ink-soft">
-            1차 시험 {status.first_score}점 × 40% + 2차 시험{" "}
-            {status.final_score}점 × 60%
-          </Text>
-        </View>
-      )}
-
-      {wrongQuestions.length > 0 && (
-        <View className="gap-3">
-          <Text className="text-base font-bold text-ink-soft">틀린 단어</Text>
-          {wrongQuestions.map((question) => (
-            <View
-              key={question.position}
-              className="rounded-2xl border border-line bg-white px-4 py-3"
-            >
-              <Text className="text-lg font-bold text-ink">
-                {question.word}
-              </Text>
-              <Text className="mt-1 text-base text-emerald-700">
-                {question.correct_index !== null
-                  ? question.choices[question.correct_index]
-                  : ""}
-              </Text>
-              {question.example && (
-                <Text className="mt-1 text-sm text-ink-soft">
-                  {question.example}
-                </Text>
-              )}
-              {question.example_meaning && (
-                <Text className="mt-0.5 text-sm text-ink-soft">
-                  {question.example_meaning}
-                </Text>
-              )}
-            </View>
-          ))}
-        </View>
-      )}
+      <AttemptReview questions={attempt.questions} />
 
       {error && (
         <View className="rounded-xl bg-red-50 px-4 py-3">
