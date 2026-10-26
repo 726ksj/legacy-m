@@ -12,10 +12,11 @@ export const FONT = {
 
 export function fontFor(className?: string) {
   if (!className) return FONT.regular;
-  if (/\bfont-(extrabold|black)\b/.test(className)) return FONT.extrabold;
-  if (/\bfont-bold\b/.test(className)) return FONT.bold;
-  if (/\bfont-semibold\b/.test(className)) return FONT.semibold;
-  if (/\bfont-medium\b/.test(className)) return FONT.medium;
+  // 화면에서 전반적으로 두꺼워 보여서 한 단계씩 가볍게 매핑한다.
+  if (/\bfont-(extrabold|black)\b/.test(className)) return FONT.bold;
+  if (/\bfont-bold\b/.test(className)) return FONT.semibold;
+  if (/\bfont-semibold\b/.test(className)) return FONT.medium;
+  if (/\bfont-medium\b/.test(className)) return FONT.regular;
   return FONT.regular;
 }
 
