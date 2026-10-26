@@ -167,7 +167,10 @@ export default function LoginScreen() {
               <Switch
                 value={rememberId}
                 onValueChange={setRememberId}
-                trackColor={{ true: colors.brand }}
+                // 꺼진 상태 트랙이 흰 카드에 묻히지 않도록 진한 회색 톤을 준다.
+                trackColor={{ false: "#c4b3ba", true: colors.brand }}
+                thumbColor="#ffffff"
+                ios_backgroundColor="#c4b3ba"
               />
             </Pressable>
 
