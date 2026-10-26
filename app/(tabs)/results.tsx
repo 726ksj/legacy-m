@@ -157,17 +157,12 @@ export default function ResultsScreen() {
                 </View>
               </ScrollView>
             )}
-            {courses.length === 1 && (
-              <Text className="mt-6 text-base font-bold text-ink-soft">
-                {course.label}
-              </Text>
-            )}
 
             {/* 학습 화면의 안내 문구 자리: 지금 선택된 주차(기본은 이번 주)를 칩으로 보여 주고 바꿀 수 있다. */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              className="mt-4"
+              className={courses.length > 1 ? "mt-4" : "mt-6"}
             >
               <View className="flex-row gap-2">
                 {weeks.map((w) => (
