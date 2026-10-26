@@ -12,17 +12,15 @@ interface MemorizeWord {
   word: string;
   meaning: string;
   example: string | null;
+  example_meaning: string | null;
 }
 
-// V01 단어 암기: 단어 · 뜻 · 예시 문장을 한 카드에 보여주고 이전/다음으로 넘긴다.
-// "뜻 가리기"를 켜면 뜻을 눌러야 보여서 스스로 떠올려 보는 연습을 할 수 있다.
+// V01 단어 암기: 단어 · 뜻 · 예시 문장 · 예시 문장 뜻을 한 카드에 보여주고 이전/다음으로 넘긴다.
 export default function MemorizeScreen() {
   const { setId } = useLocalSearchParams<{ setId: string }>();
   const [title, setTitle] = useState("");
   const [words, setWords] = useState<MemorizeWord[]>([]);
   const [index, setIndex] = useState(0);
-  const [hideMeaning, setHideMeaning] = useState(false);
-  const [revealed, setRevealed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +43,7 @@ export default function MemorizeScreen() {
           .maybeSingle(),
         supabase
           .from("vocab_words")
-          .select("id, word, meaning, example")
+          .select("id, word, meaning, example, example_meaning")
           .eq("vocab_set_id", setId)
           .order("sort_order", { ascending: true })
           .returns<MemorizeWord[]>(),
@@ -66,12 +64,7 @@ export default function MemorizeScreen() {
   const word = words[index];
   const isFirst = index === 0;
   const isLast = index === words.length - 1;
-  const meaningVisible = !hideMeaning || revealed;
-
-  const move = (next: number) => {
-    setIndex(next);
-    setRevealed(false);
-  };
+  const move = (next: number) => setIndex(next);
 
   return (
     <View className="flex-1 bg-blush">
@@ -105,26 +98,6 @@ export default function MemorizeScreen() {
             <Text className="flex-1 text-base font-bold text-ink-soft">
               {title}
             </Text>
-            <Pressable
-              onPress={() => {
-                setHideMeaning((v) => !v);
-                setRevealed(false);
-              }}
-              className={`flex-row items-center gap-1.5 rounded-full px-3 py-1.5 ${
-                hideMeaning ? "bg-brand" : "border border-line bg-white"
-              }`}
-            >
-              <Ionicons
-                name={hideMeaning ? "eye-off" : "eye-outline"}
-                size={16}
-                color={hideMeaning ? "#ffffff" : colors.inkSoft}
-              />
-              <Text
-                className={`text-sm font-bold ${hideMeaning ? "text-white" : "text-ink-soft"}`}
-              >
-                뜻 가리기
-              </Text>
-            </Pressable>
           </View>
 
           <View className="h-2 rounded-full bg-white">
@@ -149,24 +122,14 @@ export default function MemorizeScreen() {
               {word.word}
             </Text>
 
-            <Pressable
-              onPress={() => setRevealed(true)}
-              disabled={meaningVisible}
-              className="mt-8 items-center rounded-2xl bg-white px-4 py-5"
-            >
-              {meaningVisible ? (
-                <Text
-                  className="text-center text-2xl font-bold"
-                  style={{ color: categoryColors.vocab.fg }}
-                >
-                  {word.meaning}
-                </Text>
-              ) : (
-                <Text className="text-base font-semibold text-ink-soft">
-                  눌러서 뜻 보기
-                </Text>
-              )}
-            </Pressable>
+            <View className="mt-8 items-center rounded-2xl bg-white px-4 py-5">
+              <Text
+                className="text-center text-2xl font-bold"
+                style={{ color: categoryColors.vocab.fg }}
+              >
+                {word.meaning}
+              </Text>
+            </View>
 
             {word.example && (
               <View className="mt-4 rounded-2xl bg-white/70 px-4 py-4">
@@ -179,6 +142,11 @@ export default function MemorizeScreen() {
                 <Text className="mt-1 text-lg leading-7 text-ink">
                   {word.example}
                 </Text>
+                {word.example_meaning && (
+                  <Text className="mt-2 text-base leading-6 text-ink-soft">
+                    {word.example_meaning}
+                  </Text>
+                )}
               </View>
             )}
           </View>

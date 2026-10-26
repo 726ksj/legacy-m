@@ -15,6 +15,7 @@ import {
   type WeeklyTask,
 } from "../../lib/weekly";
 import { fetchHomeStats, type HomeStats } from "../../lib/homeStats";
+import { fetchUnreadCount } from "../../lib/notifications";
 import { colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 
@@ -44,6 +45,7 @@ export default function HomeScreen() {
   });
   const [courses, setCourses] = useState<WeeklyCourse[]>([]);
   const [stats, setStats] = useState<HomeStats | null>(null);
+  const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -56,7 +58,7 @@ export default function HomeScreen() {
       return;
     }
 
-    const [{ data: profile }, weeklyCourses, homeStats] = await Promise.all([
+    const [{ data: profile }, weeklyCourses, homeStats, unreadCount] = await Promise.all([
       supabase
         .from("profiles")
         .select("name")
@@ -66,8 +68,10 @@ export default function HomeScreen() {
       fetchWeeklyCourses().catch(() => [] as WeeklyCourse[]),
       // 연속 학습일·성적 요약을 못 불러와도 홈 화면은 계속 보이게 한다.
       fetchHomeStats().catch(() => null),
+      fetchUnreadCount().catch(() => 0),
     ]);
 
+    setUnread(unreadCount);
     setStats(homeStats);
     setName(profile?.name ?? null);
     setCourses(weeklyCourses);
@@ -146,6 +150,16 @@ export default function HomeScreen() {
             className="h-9 w-9 items-center justify-center rounded-full bg-white/25"
           >
             <Ionicons name="notifications-outline" size={20} color="white" />
+            {unread > 0 && (
+              <View
+                className="absolute -right-1 -top-1 h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1"
+                style={{ borderWidth: 1.5, borderColor: colors.brand }}
+              >
+                <Text className="text-[11px] font-bold text-white">
+                  {unread > 99 ? "99+" : unread}
+                </Text>
+              </View>
+            )}
           </Pressable>
         }
       />
