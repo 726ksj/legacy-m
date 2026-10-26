@@ -127,7 +127,6 @@ export default function LearnKindScreen() {
     );
   }
 
-  const palette = categoryColors[kind];
   const title = KIND_TITLES[kind];
 
   if (loading) {
@@ -141,7 +140,6 @@ export default function LearnKindScreen() {
     );
   }
 
-  const pastCount = tests.filter(({ task }) => task.is_late || task.is_overdue).length;
   const visibleGroups = showAllWeeks
     ? weekGroups
     : weekGroups.filter(
@@ -168,30 +166,7 @@ export default function LearnKindScreen() {
           </View>
         )}
 
-        <View
-          className="mt-6 flex-row items-center rounded-3xl px-5 py-5"
-          style={{ backgroundColor: palette.bg, borderWidth: 1, borderColor: palette.border }}
-        >
-          <View
-            className="h-14 w-14 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: palette.accent }}
-          >
-            <Ionicons name={KIND_ICON[kind]} size={28} color={palette.fg} />
-          </View>
-          <View className="ml-4 flex-1">
-            <Text className="text-lg font-bold text-ink">
-              {tests.length > 0 ? `응시할 시험 ${tests.length}개` : "응시할 시험이 없어요"}
-            </Text>
-            <Text className="mt-0.5 text-base text-ink-soft">
-              {pastCount > 0
-                ? `지난 주에 못 끝낸 시험 ${pastCount}개`
-                : "끝낸 시험은 학습 결과에서 볼 수 있어요"}
-            </Text>
-          </View>
-        </View>
-
-        <View className="mt-6 gap-6">
-          {entries.length === 0 && (
+        <View className="mt-6 gap-6">          {entries.length === 0 && (
             <View className="items-center rounded-3xl border border-line bg-white px-6 py-10">
               <Ionicons name="checkmark-circle-outline" size={34} color={colors.inkMuted} />
               <Text className="mt-3 text-lg text-ink-soft">아직 올라온 학습이 없어요</Text>

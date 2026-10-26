@@ -65,6 +65,8 @@ export default function MemorizeScreen() {
   const isFirst = index === 0;
   const isLast = index === words.length - 1;
   const move = (next: number) => setIndex(next);
+  // 마지막 단어에서 완료하면 학습 화면(단어(VOCA))으로 돌아간다.
+  const finish = () => (router.canGoBack() ? router.back() : router.replace("/learn/vocab"));
 
   return (
     <View className="flex-1 bg-blush">
@@ -119,37 +121,58 @@ export default function MemorizeScreen() {
             }}
           >
            <ScrollView contentContainerClassName="px-6 py-8">
-            <Text className="text-center text-5xl font-extrabold text-ink">
-              {word.word}
-            </Text>
+            {/* 단어·뜻·예시 문장 칸은 내용 길이와 관계없이 높이를 고정한다(예시 문장은 칸 안에서 스크롤). */}
+            <View className="h-16 justify-center">
+              <Text
+                className="text-center text-5xl font-extrabold text-ink"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {word.word}
+              </Text>
+            </View>
 
-            <View className="mt-8 items-center rounded-2xl bg-white px-4 py-5">
+            <View className="mt-6 h-20 items-center justify-center rounded-2xl bg-white px-4">
               <Text
                 className="text-center text-2xl font-bold"
                 style={{ color: categoryColors.vocab.fg }}
+                numberOfLines={2}
+                adjustsFontSizeToFit
               >
                 {word.meaning}
               </Text>
             </View>
 
-            {word.example && (
-              <View className="mt-4 rounded-2xl bg-white/70 px-4 py-4">
+            <View className="mt-4 h-48 rounded-2xl bg-white/70">
+              <ScrollView
+                nestedScrollEnabled
+                contentContainerClassName="px-4 py-4"
+                showsVerticalScrollIndicator={false}
+              >
                 <Text
                   className="text-sm font-bold"
                   style={{ color: categoryColors.vocab.fg }}
                 >
                   예시 문장
                 </Text>
-                <Text className="mt-1 text-lg leading-7 text-ink">
-                  {word.example}
-                </Text>
-                {word.example_meaning && (
-                  <Text className="mt-2 text-base leading-6 text-ink-soft">
-                    {word.example_meaning}
+                {word.example ? (
+                  <>
+                    <Text className="mt-1 text-lg leading-7 text-ink">
+                      {word.example}
+                    </Text>
+                    {word.example_meaning && (
+                      <Text className="mt-2 text-base leading-6 text-ink-soft">
+                        {word.example_meaning}
+                      </Text>
+                    )}
+                  </>
+                ) : (
+                  <Text className="mt-1 text-base text-ink-soft">
+                    예시 문장이 없어요.
                   </Text>
                 )}
-              </View>
-            )}
+              </ScrollView>
+            </View>
            </ScrollView>
           </View>
 
@@ -165,12 +188,12 @@ export default function MemorizeScreen() {
             </Pressable>
             <Pressable
               onPress={() =>
-                isLast ? router.replace(`/test/${setId}`) : move(index + 1)
+                isLast ? finish() : move(index + 1)
               }
               className="flex-1 flex-row items-center justify-center gap-1 rounded-2xl bg-brand py-4 shadow-md shadow-brand/40"
             >
               <Text className="text-lg font-bold text-white">
-                {isLast ? "테스트 하러 가기" : "다음"}
+                {isLast ? "완료" : "다음"}
               </Text>
               {!isLast && (
                 <Ionicons name="chevron-forward" size={20} color="#ffffff" />

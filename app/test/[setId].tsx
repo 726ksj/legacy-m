@@ -261,11 +261,12 @@ export default function TestOverviewScreen() {
           {status && (
             <>
               <View className="gap-3">
-                {/* 1차 시험·1차 재시험·2차 시험은 항상 보이고, 2차·3차 재시험은 진행됐거나 다음 차례일 때만 보인다. */}
+                {/* 1차 시험·2차 시험은 항상 보이고, 재시험은 진행됐거나 다음 차례일 때만 보인다(1차를 다 맞으면 1차 재시험은 나오지 않는다). */}
                 {[1, 2, 3, 4, 5]
                   .filter(
                     (roundNo) =>
-                      roundNo <= 3 ||
+                      roundNo === 1 ||
+                      roundNo === 3 ||
                       status.rounds.some(
                         (round) => round.round_no === roundNo,
                       ) ||
