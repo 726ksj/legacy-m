@@ -16,7 +16,7 @@ import EmptyState from "../../components/EmptyState";
 import TestResultCard from "../../components/TestResultCard";
 
 const SECTIONS = [
-  { kind: "vocab", title: "단어 학습" },
+  { kind: "vocab", title: "단어(VOCA)" },
   { kind: "writing", title: "어순 배열" },
   { kind: "order", title: "순서 배열" },
   { kind: "sentence", title: "문장 배열" },
