@@ -9,6 +9,7 @@ import {
   fetchStudyItems,
   isTestKind,
   KIND_TITLES,
+  memorizeRoute,
   type MemorizeSet,
   type StudyItem,
 } from "../../lib/study";
@@ -63,7 +64,8 @@ export default function LearnKindScreen() {
     try {
       const [items, sets] = await Promise.all([
         fetchStudyItems(),
-        kind === "vocab" ? fetchMemorizeSets() : Promise.resolve([]),
+        // 암기 목록은 세트를 불러오지 못해도 시험 목록은 보이도록 따로 실패를 흡수한다.
+        fetchMemorizeSets(kind).catch(() => [] as MemorizeSet[]),
       ]);
       setTests(items.filter(({ task }) => task.kind === kind));
       setMemorize(sets);
@@ -93,7 +95,7 @@ export default function LearnKindScreen() {
       task: taskById.get(set.id) ?? null,
       canMemorize: true,
     }));
-    // 암기 목록에 없는 시험(단어 외 유형 포함)도 빠짐없이 넣는다.
+    // 암기 목록에 없는 시험도 빠짐없이 넣는다(이 경우 암기 버튼은 숨긴다).
     const known = new Set(list.map((e) => e.id));
     for (const { task } of tests) {
       if (!known.has(task.id)) {
@@ -236,7 +238,7 @@ function EntryCard({ entry, kind }: { entry: Entry; kind: keyof typeof categoryC
       <View className="mt-4 flex-row gap-2.5">
         {entry.canMemorize && (
           <Pressable
-            onPress={() => router.push(`/memorize/${entry.id}`)}
+            onPress={() => router.push(memorizeRoute(kind, entry.id))}
             className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3.5 active:opacity-80"
             style={{ backgroundColor: palette.bg, borderWidth: 1, borderColor: palette.border }}
           >

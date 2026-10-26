@@ -1,4 +1,7 @@
 import { fetchVocabOverview } from "./vocab";
+import { fetchWritingGroups } from "./writing";
+import { fetchOrderOverview } from "./order";
+import { fetchSentenceOverview } from "./sentence";
 import { fetchVocabStatuses } from "./progress";
 import {
   fetchWeeklyCourses,
@@ -62,16 +65,31 @@ export async function fetchStudyItems(): Promise<StudyItem[]> {
   );
 }
 
-// 암기할 단어장 목록(이미 시험을 마친 단어장도 다시 외울 수 있다).
+// 암기할 세트 목록(이미 시험을 마친 세트도 다시 외울 수 있다).
 export interface MemorizeSet {
   id: string;
   title: string;
   week: number | null;
 }
 
-export async function fetchMemorizeSets(): Promise<MemorizeSet[]> {
-  const overview = await fetchVocabOverview();
-  return overview.groups.flatMap((group) =>
-    group.sets.map((set) => ({ id: set.id, title: set.title, week: set.week })),
-  );
+export async function fetchMemorizeSets(kind: TestKind): Promise<MemorizeSet[]> {
+  if (kind === "vocab") {
+    const overview = await fetchVocabOverview();
+    return overview.groups.flatMap((group) =>
+      group.sets.map((set) => ({ id: set.id, title: set.title, week: set.week })),
+    );
+  }
+  if (kind === "writing") {
+    const groups = await fetchWritingGroups();
+    return groups.flatMap((group) =>
+      group.sets.map((set) => ({ id: set.id, title: set.title, week: set.week })),
+    );
+  }
+  const rows = kind === "order" ? await fetchOrderOverview() : await fetchSentenceOverview();
+  return rows.map((row) => ({ id: row.id, title: row.title, week: row.week }));
+}
+
+// 암기 화면 경로. 단어는 기본 화면, 나머지 유형은 kind를 붙인다.
+export function memorizeRoute(kind: TestKind, id: string) {
+  return (kind === "vocab" ? `/memorize/${id}` : `/memorize/${id}?kind=${kind}`) as `/memorize/${string}`;
 }

@@ -6,6 +6,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { categoryColors, colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
+import TextMemorize from "../../components/TextMemorize";
+import { isTestKind } from "../../lib/study";
 
 interface MemorizeWord {
   id: string;
@@ -16,7 +18,7 @@ interface MemorizeWord {
 }
 
 // V01 단어 암기: 단어 · 뜻 · 예시 문장 · 예시 문장 뜻을 한 카드에 보여주고 이전/다음으로 넘긴다.
-export default function MemorizeScreen() {
+function VocabMemorize() {
   const { setId } = useLocalSearchParams<{ setId: string }>();
   const [title, setTitle] = useState("");
   const [words, setWords] = useState<MemorizeWord[]>([]);
@@ -204,4 +206,13 @@ export default function MemorizeScreen() {
       )}
     </View>
   );
+}
+
+// 암기 화면 진입점. ?kind=writing|order|sentence면 문장형 암기, 없으면 단어 암기.
+export default function MemorizeScreen() {
+  const { setId, kind } = useLocalSearchParams<{ setId: string; kind?: string }>();
+  if (isTestKind(kind) && kind !== "vocab") {
+    return <TextMemorize kind={kind} setId={setId} />;
+  }
+  return <VocabMemorize />;
 }
