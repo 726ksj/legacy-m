@@ -96,11 +96,12 @@ export async function fetchTextMemorize(
         key: String(q.order_no),
         badge: `문제 ${q.order_no}`,
         blocks: [
-          { label: "주어진 글", text: q.intro },
+          { label: "주어진 글", text: q.intro, height: 104 },
           ...q.parts.map((text, i) => ({
             label: `${ORDINAL[i]} 덩어리`,
             text,
             emphasis: true,
+            height: 120,
           })),
         ],
       })),
@@ -114,12 +115,14 @@ export async function fetchTextMemorize(
       key: String(q.order_no),
       badge: `문제 ${q.order_no}`,
       blocks: [
-        { label: "첫 문장", text: q.intro },
-        ...q.sentences.map((text, i) => ({
-          label: `${i + 2}번째 문장`,
-          text,
+        { label: "첫 문장", text: q.intro, height: 104 },
+        // 문제마다 문장 수가 달라서 한 칸에 번호를 붙여 모으고, 칸 높이는 고정한다.
+        {
+          label: "이어지는 문장",
+          text: q.sentences.map((text, i) => `${i + 2}. ${text}`).join("\n\n"),
           emphasis: true,
-        })),
+          height: 320,
+        },
       ],
     })),
   };
