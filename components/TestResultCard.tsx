@@ -41,7 +41,7 @@ export default function TestResultCard({ test }: { test: WeekTest }) {
           <Text className="flex-1 text-lg font-bold text-ink">{test.title}</Text>
         </View>
         {done && test.scoreLabel ? (
-          <View className="rounded-full bg-white px-3 py-1">
+          <View className="min-w-[72px] items-center rounded-full bg-white px-3 py-1">
             <Text
               className="text-base font-extrabold"
               style={{ color: palette.fg }}

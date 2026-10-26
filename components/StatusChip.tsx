@@ -12,7 +12,7 @@ const STYLE: Record<SetStatus, { label: string; bg: string; text: string }> = {
 export default function StatusChip({ status }: { status: SetStatus }) {
   const style = STYLE[status];
   return (
-    <View className={`rounded-full px-3 py-1 ${style.bg}`}>
+    <View className={`min-w-[72px] items-center rounded-full px-3 py-1 ${style.bg}`}>
       <Text className={`text-sm font-bold ${style.text}`}>{style.label}</Text>
     </View>
   );
