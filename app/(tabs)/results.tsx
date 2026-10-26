@@ -66,6 +66,7 @@ export default function ResultsScreen() {
   const [courses, setCourses] = useState<CourseResults[]>([]);
   const [courseKey, setCourseKey] = useState<string | null>(null);
   const [week, setWeek] = useState<number | null>(null);
+  const [kind, setKind] = useState<(typeof SECTIONS)[number]["kind"]>("vocab");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -123,6 +124,9 @@ export default function ResultsScreen() {
   const hasNoWeek = course ? testsOfWeek(course, NO_WEEK).length > 0 : false;
   const selectedWeek = week ?? (course ? defaultWeek(course) : 1);
   const tests = course ? testsOfWeek(course, selectedWeek) : [];
+  const kindTests = tests.filter((t) => t.kind === kind);
+  const kindPalette = categoryColors[kind];
+  const kindTitle = SECTIONS.find((s) => s.kind === kind)?.title ?? "";
   const range =
     course && selectedWeek !== NO_WEEK
       ? weekRange(course.startDate, selectedWeek)
@@ -173,6 +177,31 @@ export default function ResultsScreen() {
               </Text>
             )}
 
+            {/* 시험 종류(단어/어순/순서/문장)를 먼저 고르고, 아래에서 주차를 고른다. */}
+            <View className="mt-5 flex-row rounded-2xl border border-line bg-white p-1">
+              {SECTIONS.map((s) => {
+                const active = kind === s.kind;
+                return (
+                  <Pressable
+                    key={s.kind}
+                    onPress={() => setKind(s.kind)}
+                    className="flex-1 items-center justify-center rounded-xl py-2.5"
+                    style={{
+                      backgroundColor: active ? categoryColors[s.kind].fg : "transparent",
+                    }}
+                  >
+                    <Text
+                      className="text-sm font-bold"
+                      style={{ color: active ? "#ffffff" : colors.inkSoft }}
+                      numberOfLines={1}
+                    >
+                      {s.title}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             {/* 이번 주가 기본으로 선택되고, 칩을 눌러 지난 주차의 결과를 본다. */}
             <ScrollView
               horizontal
@@ -183,7 +212,7 @@ export default function ResultsScreen() {
                 {weeks.map((w) => (
                   <Chip
                     key={w}
-                    label={w === course.currentWeek ? `${w}주차 · 이번 주` : `${w}주차`}
+                    label={`${w}주차`}
                     selected={selectedWeek === w}
                     onPress={() => setWeek(w)}
                   />
@@ -201,31 +230,18 @@ export default function ResultsScreen() {
               <Text className="mt-2 text-sm text-ink-soft">{range}</Text>
             )}
 
-            {tests.length === 0 ? (
+            {kindTests.length === 0 ? (
               <EmptyState
                 icon="document-text-outline"
-                title="이 주차에는 시험이 없어요"
+                title={`이 주차에는 ${kindTitle} 시험이 없어요`}
                 description="강사님이 시험을 등록하면 여기에 나타나요"
               />
             ) : (
-              SECTIONS.map(({ kind, title }) => {
-                const ofKind = tests.filter((t) => t.kind === kind);
-                if (ofKind.length === 0) return null;
-                const palette = categoryColors[kind];
-                return (
-                  <View key={kind} className="mt-6 gap-3">
-                    <Text
-                      className="text-lg font-extrabold"
-                      style={{ color: palette.fg }}
-                    >
-                      {title}
-                    </Text>
-                    {ofKind.map((test) => (
-                      <TestResultCard key={`${test.kind}:${test.id}`} test={test} />
-                    ))}
-                  </View>
-                );
-              })
+              <View className="mt-5 gap-3">
+                {kindTests.map((test) => (
+                  <TestResultCard key={`${test.kind}:${test.id}`} test={test} />
+                ))}
+              </View>
             )}
           </>
         )}

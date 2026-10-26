@@ -106,6 +106,11 @@ function ResultView({ attempt }: { attempt: Attempt }) {
                   {question.example}
                 </Text>
               )}
+              {question.example_meaning && (
+                <Text className="mt-0.5 text-sm text-ink-soft">
+                  {question.example_meaning}
+                </Text>
+              )}
             </View>
           ))}
         </View>
@@ -232,7 +237,7 @@ export default function AttemptScreen() {
         back
         right={
           attempt && !showResult ? (
-            <View className="rounded-full bg-white/25 px-2.5 py-1">
+            <View className="min-w-[72px] items-center rounded-full bg-white/25 px-2.5 py-1">
               <Text className="text-sm font-bold text-white">
                 {question?.position ?? attempt.total_count} /{" "}
                 {attempt.total_count}
@@ -299,6 +304,11 @@ export default function AttemptScreen() {
                 <Text className="mt-1 text-base text-ink">
                   {question.example}
                 </Text>
+                {question.example_meaning && (
+                  <Text className="mt-1.5 text-sm text-ink-soft">
+                    {question.example_meaning}
+                  </Text>
+                )}
               </View>
             )}
 

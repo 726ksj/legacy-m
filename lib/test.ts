@@ -35,6 +35,7 @@ export interface AttemptQuestion {
   // 답한 문항에만 내려온다(서버가 미리 알려주지 않는다).
   correct_index: number | null;
   example: string | null;
+  example_meaning: string | null;
 }
 
 export interface Attempt {

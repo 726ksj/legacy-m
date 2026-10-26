@@ -89,11 +89,13 @@ function RoundCard({
         <Text className="mt-2 text-2xl font-extrabold text-ink">
           {ROUND_TITLE[roundNo]}
         </Text>
-        <Text className="mt-1 text-sm text-ink-soft">
-          {round?.status === "in_progress"
-            ? "풀던 시험을 이어서 풀어요"
-            : (RETEST_DESCRIPTION[roundNo] ?? "4지선다로 풀어요")}
-        </Text>
+        {(round?.status === "in_progress" || RETEST_DESCRIPTION[roundNo]) && (
+          <Text className="mt-1 text-sm text-ink-soft">
+            {round?.status === "in_progress"
+              ? "풀던 시험을 이어서 풀어요"
+              : RETEST_DESCRIPTION[roundNo]}
+          </Text>
+        )}
         <Pressable
           onPress={onStart}
           disabled={starting}

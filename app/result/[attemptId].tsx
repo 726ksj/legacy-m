@@ -31,8 +31,8 @@ function QuestionRow({ question }: { question: AttemptQuestion }) {
 
   return (
     <View
-      className={`rounded-2xl border bg-white px-4 py-3 ${
-        wrong ? "border-red-200" : "border-line"
+      className={`rounded-2xl border px-4 py-3 ${
+        wrong ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"
       }`}
     >
       <View className="flex-row items-center justify-between">
@@ -65,6 +65,11 @@ function QuestionRow({ question }: { question: AttemptQuestion }) {
       )}
       {question.example && (
         <Text className="mt-1.5 text-sm text-ink-soft">{question.example}</Text>
+      )}
+      {question.example_meaning && (
+        <Text className="mt-0.5 text-sm text-ink-soft">
+          {question.example_meaning}
+        </Text>
       )}
     </View>
   );
