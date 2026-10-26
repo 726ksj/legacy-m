@@ -27,13 +27,6 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: "홈",
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
         name="study"
         options={{
           title: "학습",
@@ -47,6 +40,13 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="alert-circle" color={color} size={size} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "홈",
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
