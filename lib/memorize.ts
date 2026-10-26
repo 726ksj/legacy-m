@@ -6,6 +6,8 @@ export interface MemorizeBlock {
   label: string;
   text: string;
   emphasis?: boolean;
+  // 있으면 이 높이로 고정하고, 넘치는 내용은 박스 안에서 스크롤한다.
+  height?: number;
 }
 
 export interface MemorizeCard {
@@ -64,16 +66,22 @@ export async function fetchTextMemorize(
         .returns<WritingRow[]>(),
     ]);
     if (setError || error || !set) throw new Error((setError ?? error)?.message ?? "not found");
+    const hasKeyPhrases = (rows ?? []).some((r) => (r.key_phrases?.length ?? 0) > 0);
     return {
       title: set.title,
       cards: (rows ?? []).map((row) => {
         const blocks: MemorizeBlock[] = [
-          { label: "우리말", text: row.korean },
-          { label: "영어", text: row.english, emphasis: true },
-          { label: "끊어 읽기", text: row.chunks.join("  /  ") },
+          { label: "우리말", text: row.korean, height: 96 },
+          { label: "영어", text: row.english, emphasis: true, height: 120 },
+          { label: "끊어 읽기", text: row.chunks.join("  /  "), height: 120 },
         ];
-        if (row.key_phrases && row.key_phrases.length > 0) {
-          blocks.push({ label: "핵심 어구", text: row.key_phrases.join(", ") });
+        // 핵심 어구는 세트에 하나라도 있으면 모든 카드에 같은 칸으로 둬서 칸 배치가 달라지지 않게 한다.
+        if (hasKeyPhrases) {
+          blocks.push({
+            label: "핵심 어구",
+            text: row.key_phrases && row.key_phrases.length > 0 ? row.key_phrases.join(", ") : "-",
+            height: 84,
+          });
         }
         return { key: row.id, badge: `문장 ${row.order_no}`, blocks };
       }),

@@ -19,10 +19,9 @@ import {
 } from "../../lib/writing";
 import ScreenHeader from "../../components/ScreenHeader";
 
-type Mode = "memorize" | "arrange" | "result" | "summary";
+type Mode = "arrange" | "result" | "summary";
 
 const HEADER_TITLE: Record<Mode, string> = {
-  memorize: "문장 암기",
   arrange: "배열 풀이",
   result: "정답 확인",
   summary: "어순 배열 결과",
@@ -94,7 +93,7 @@ export default function WritingStudyScreen() {
   const [title, setTitle] = useState("");
   const [sentences, setSentences] = useState<WritingSentence[]>([]);
   const [progress, setProgress] = useState<WritingProgress | null>(null);
-  const [mode, setMode] = useState<Mode>("memorize");
+  const [mode, setMode] = useState<Mode>("arrange");
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -112,6 +111,24 @@ export default function WritingStudyScreen() {
     }
   }, [setId]);
 
+  // 문장 하나의 배열 풀이를 시작한다(암기는 학습 화면의 [암기]에서 따로 한다).
+  const begin = useCallback(async (target: WritingSentence, targetIndex: number) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const started = await startWritingAttempt(target.id);
+      setIndex(targetIndex);
+      setAttempt(started);
+      setSelectedIds([]);
+      setResult(null);
+      setMode("arrange");
+    } catch (e) {
+      setError(friendlyWritingError(e));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     setError(null);
     const {
@@ -125,37 +142,33 @@ export default function WritingStudyScreen() {
       const loaded = await fetchWritingSet(setId);
       setTitle(loaded.title);
       setSentences(loaded.sentences);
-      await refreshProgress();
+      const loadedProgress = await getWritingProgress(setId);
+      setProgress(loadedProgress);
+      // 아직 완성하지 못한 첫 문장부터 바로 배열을 시작한다. 모두 완성했으면 결과를 보여 준다.
+      const firstOpen = loaded.sentences.findIndex(
+        (s) =>
+          !loadedProgress.sentences.find((p) => p.sentence_id === s.id)?.completed,
+      );
+      if (firstOpen === -1) {
+        setMode("summary");
+      } else {
+        await begin(loaded.sentences[firstOpen], firstOpen);
+      }
     } catch (e) {
       setError(friendlyWritingError(e));
     }
-  }, [setId, refreshProgress]);
+  }, [setId, begin]);
 
   useEffect(() => {
     load().finally(() => setLoading(false));
   }, [load]);
 
   const sentence = sentences[index];
-  const sentenceProgress = progress?.sentences.find(
-    (s) => s.sentence_id === sentence?.id,
-  );
   const isLast = index === sentences.length - 1;
 
-  const startArrange = async () => {
-    if (!sentence) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const started = await startWritingAttempt(sentence.id);
-      setAttempt(started);
-      setSelectedIds([]);
-      setResult(null);
-      setMode("arrange");
-    } catch (e) {
-      setError(friendlyWritingError(e));
-    } finally {
-      setBusy(false);
-    }
+  // 결과 화면의 "다시 풀기": 같은 문장을 새로 시작한다.
+  const startArrange = () => {
+    if (sentence) begin(sentence, index);
   };
 
   const submit = async () => {
@@ -185,16 +198,12 @@ export default function WritingStudyScreen() {
       setMode("summary");
       return;
     }
-    setIndex((i) => i + 1);
-    setMode("memorize");
+    await begin(sentences[index + 1], index + 1);
   };
 
   const jumpTo = (sentenceId: string) => {
     const target = sentences.findIndex((s) => s.id === sentenceId);
-    if (target >= 0) {
-      setIndex(target);
-      setMode("memorize");
-    }
+    if (target >= 0) begin(sentences[target], target);
   };
 
   const showCounter = mode !== "summary" && sentences.length > 0;
@@ -206,7 +215,7 @@ export default function WritingStudyScreen() {
         back
         right={
           showCounter ? (
-            <View className="rounded-full bg-white/25 px-2.5 py-1">
+            <View className="min-w-[72px] items-center rounded-full bg-white/25 px-2.5 py-1">
               <Text className="text-sm font-bold text-white">
                 {index + 1} / {sentences.length}
               </Text>
@@ -257,56 +266,6 @@ export default function WritingStudyScreen() {
                 {error}
               </Text>
             </View>
-          )}
-
-          {mode === "memorize" && (
-            <>
-              <View className="rounded-3xl border border-line bg-white px-6 py-8 shadow-sm shadow-brand/20">
-                <View className="flex-row items-center justify-between">
-                  <View className="self-start rounded-full bg-cream px-3 py-1">
-                    <Text className="text-sm font-bold text-berry">우리말</Text>
-                  </View>
-                  {sentenceProgress?.completed && (
-                    <View className="rounded-full bg-emerald-50 px-2.5 py-1">
-                      <Text className="text-sm font-bold text-emerald-600">
-                        완성 · {sentenceProgress.points}점
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <Text className="mt-3 text-xl font-bold leading-7 text-ink">
-                  {sentence.korean}
-                </Text>
-
-                <View className="mt-6 self-start rounded-full bg-blush px-3 py-1">
-                  <Text className="text-sm font-bold text-brand-dark">
-                    영어 문장
-                  </Text>
-                </View>
-                <Text className="mt-3 text-2xl font-extrabold leading-8 text-ink">
-                  {sentence.english}
-                </Text>
-                <View className="mt-5">
-                  <ChunkChips chunks={sentence.chunks} />
-                </View>
-              </View>
-
-              <View className="flex-row gap-3">
-                <SecondaryButton
-                  label="이전"
-                  disabled={index === 0}
-                  onPress={() => setIndex((i) => Math.max(0, i - 1))}
-                />
-                <PrimaryButton
-                  label="배열 시작"
-                  onPress={startArrange}
-                  loading={busy}
-                />
-              </View>
-              <Text className="text-center text-sm text-ink-soft">
-                문장을 충분히 익혔다면 영어 정답을 가리고 배열해 보세요
-              </Text>
-            </>
           )}
 
           {mode === "arrange" && attempt && (
@@ -564,10 +523,7 @@ export default function WritingStudyScreen() {
               <View className="flex-row gap-3">
                 <SecondaryButton
                   label="처음부터 다시"
-                  onPress={() => {
-                    setIndex(0);
-                    setMode("memorize");
-                  }}
+                  onPress={() => begin(sentences[0], 0)}
                 />
                 <PrimaryButton label="목록으로" onPress={() => router.back()} />
               </View>

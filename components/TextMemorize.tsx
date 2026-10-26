@@ -114,17 +114,34 @@ export default function TextMemorize({
                 <View
                   key={block.label}
                   className="rounded-2xl bg-white px-4 py-3.5"
+                  style={block.height ? { height: block.height } : undefined}
                 >
                   <Text className="text-sm font-bold" style={{ color: palette.fg }}>
                     {block.label}
                   </Text>
-                  <Text
-                    className={`mt-1 text-ink ${
-                      block.emphasis ? "text-lg leading-7 font-bold" : "text-base leading-6"
-                    }`}
-                  >
-                    {block.text}
-                  </Text>
+                  {(() => {
+                    const body = (
+                      <Text
+                        className={`text-ink ${
+                          block.emphasis ? "text-lg leading-7 font-bold" : "text-base leading-6"
+                        }`}
+                      >
+                        {block.text}
+                      </Text>
+                    );
+                    // 높이가 고정된 칸은 넘치는 글을 칸 안에서 스크롤한다.
+                    return block.height ? (
+                      <ScrollView
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator={false}
+                        className="mt-1 flex-1"
+                      >
+                        {body}
+                      </ScrollView>
+                    ) : (
+                      <View className="mt-1">{body}</View>
+                    );
+                  })()}
                 </View>
               ))}
             </ScrollView>
