@@ -13,6 +13,7 @@ import {
   type SentenceProgress,
 } from "../../lib/sentence";
 import ScreenHeader from "../../components/ScreenHeader";
+import { ROUND_TITLE } from "../../lib/test";
 import { Text } from "../../components/AppText";
 
 const palette = categoryColors.sentence;
@@ -27,7 +28,9 @@ function Summary({ progress }: { progress: SentenceProgress }) {
         end={{ x: 1, y: 1 }}
         style={{ borderRadius: 28, paddingHorizontal: 22, paddingVertical: 24 }}
       >
-        <Text className="text-sm font-bold text-cream">{progress.title}</Text>
+        <Text className="text-sm font-bold text-cream">
+          {ROUND_TITLE[progress.round_no]} · {progress.title}
+        </Text>
         <Text className="mt-1 text-5xl font-extrabold text-white">
           {progress.score ?? 0}점
         </Text>
@@ -82,7 +85,9 @@ function Summary({ progress }: { progress: SentenceProgress }) {
 }
 
 export default function SentenceScreen() {
-  const { setId } = useLocalSearchParams<{ setId: string }>();
+  const { setId, round: roundParam } = useLocalSearchParams<{ setId: string; round?: string }>();
+  // 회차 현황 화면에서 넘겨 준 회차. 없으면 서버가 지금 풀 회차를 정한다.
+  const round = Number(roundParam) || undefined;
   const [progress, setProgress] = useState<SentenceProgress | null>(null);
   const [position, setPosition] = useState(0);
   const [attempt, setAttempt] = useState<SentenceAttempt | null>(null);
@@ -98,7 +103,7 @@ export default function SentenceScreen() {
     setAttempt(null);
     setPicked([]);
     setPosition(index);
-    setAttempt(await startSentenceAttempt(loaded.questions[index].question_id));
+    setAttempt(await startSentenceAttempt(loaded.questions[index].question_id, loaded.round_no));
   }, []);
 
   const load = useCallback(async () => {
@@ -111,7 +116,7 @@ export default function SentenceScreen() {
       return;
     }
     try {
-      const loaded = await getSentenceProgress(setId);
+      const loaded = await getSentenceProgress(setId, round);
       setProgress(loaded);
       if (loaded.completed || loaded.total === 0) {
         setShowSummary(true);
@@ -123,7 +128,7 @@ export default function SentenceScreen() {
     } catch (e) {
       setError(friendlySentenceError(e));
     }
-  }, [setId, openQuestion]);
+  }, [setId, round, openQuestion]);
 
   useEffect(() => {
     load().finally(() => setLoading(false));
@@ -146,7 +151,7 @@ export default function SentenceScreen() {
     try {
       const result = await answerSentenceQuestion(attempt.attempt_id, picked);
       setAttempt(result);
-      setProgress(await getSentenceProgress(setId));
+      setProgress(await getSentenceProgress(setId, round));
     } catch (e) {
       setError(friendlySentenceError(e));
     } finally {
@@ -156,7 +161,7 @@ export default function SentenceScreen() {
 
   const onNext = async () => {
     if (!progress) return;
-    const latest = await getSentenceProgress(setId).catch(() => progress);
+    const latest = await getSentenceProgress(setId, round).catch(() => progress);
     setProgress(latest);
     const nextIndex = latest.questions.findIndex(
       (q, i) => i > position && !q.answered,
@@ -187,7 +192,7 @@ export default function SentenceScreen() {
   return (
     <View className="flex-1 bg-blush">
       <ScreenHeader
-        title="문장 배열"
+        title={progress ? ROUND_TITLE[progress.round_no] : "문장 배열"}
         back
         right={
           progress && !showSummary ? (

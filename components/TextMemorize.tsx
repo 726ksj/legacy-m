@@ -123,7 +123,7 @@ export default function TextMemorize({
                     const body = (
                       <Text
                         className={`text-ink ${
-                          block.emphasis ? "text-lg leading-7 font-bold" : "text-base leading-6"
+                          block.emphasis ? "text-xl leading-8 font-bold" : "text-lg leading-7"
                         }`}
                       >
                         {block.text}

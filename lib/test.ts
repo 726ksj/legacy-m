@@ -1,7 +1,9 @@
 import { supabase } from "./supabase";
+import type { TestKind } from "./weekly";
 
 export interface TestRound {
-  attempt_id: string;
+  // 단어 시험만 회차마다 응시 기록(attempt)이 하나라서 id가 있다. 다른 유형은 null.
+  attempt_id: string | null;
   round_no: number;
   status: "in_progress" | "completed";
   total_count: number;
@@ -64,17 +66,29 @@ export const ROUND_TITLE: Record<number, string> = {
   5: "3차 재시험",
 };
 
-// 재시험(틀린 단어만 다시 푸는 시험) 안내 문구.
+// 재시험(틀린 것만 다시 푸는 시험) 안내 문구. 단어는 "단어", 나머지 유형은 "문제".
+export function retestDescription(roundNo: number, kind: TestKind = "vocab"): string | undefined {
+  const noun = kind === "vocab" ? "단어" : "문제";
+  const text: Record<number, string> = {
+    2: `1차 시험에서 틀린 ${noun}만 다시 풀어요`,
+    4: `2차 시험에서 틀린 ${noun}만 다시 풀어요`,
+    5: `1차·2차 시험에서 모두 틀린 ${noun}만 마지막으로 다시 풀어요`,
+  };
+  return text[roundNo];
+}
+
+// 단어 시험의 재시험 안내 문구(기존 호출용).
 export const RETEST_DESCRIPTION: Record<number, string> = {
-  2: "1차 시험에서 틀린 단어만 다시 풀어요",
-  4: "2차 시험에서 틀린 단어만 다시 풀어요",
-  5: "1차·2차 시험에서 모두 틀린 단어만 마지막으로 다시 풀어요",
+  2: retestDescription(2)!,
+  4: retestDescription(4)!,
+  5: retestDescription(5)!,
 };
 
 // 다음 시험을 시작하는 버튼 문구.
-export function startLabel(roundNo: number): string {
-  return RETEST_DESCRIPTION[roundNo]
-    ? `틀린 단어 다시 풀기 (${ROUND_TITLE[roundNo]})`
+export function startLabel(roundNo: number, kind: TestKind = "vocab"): string {
+  const noun = kind === "vocab" ? "단어" : "문제";
+  return retestDescription(roundNo, kind)
+    ? `틀린 ${noun} 다시 풀기 (${ROUND_TITLE[roundNo]})`
     : `${ROUND_TITLE[roundNo]} 시작`;
 }
 
@@ -84,8 +98,11 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
-export const getTestStatus = (vocabSetId: string) =>
-  rpc<TestStatus>("get_vocab_test_status", { p_vocab_set_id: vocabSetId });
+// 단어는 get_vocab_test_status, 어순/순서/문장 배열은 get_{kind}_test_status(같은 모양).
+export const getTestStatus = (setId: string, kind: TestKind = "vocab") =>
+  kind === "vocab"
+    ? rpc<TestStatus>("get_vocab_test_status", { p_vocab_set_id: setId })
+    : rpc<TestStatus>(`get_${kind}_test_status`, { p_set_id: setId });
 
 export const startAttempt = (vocabSetId: string) =>
   rpc<string>("start_vocab_attempt", { p_vocab_set_id: vocabSetId });

@@ -71,9 +71,9 @@ export async function fetchTextMemorize(
       title: set.title,
       cards: (rows ?? []).map((row) => {
         const blocks: MemorizeBlock[] = [
-          { label: "우리말", text: row.korean, height: 96 },
-          { label: "영어", text: row.english, emphasis: true, height: 120 },
-          { label: "끊어 읽기", text: row.chunks.join("  /  "), height: 120 },
+          { label: "우리말", text: row.korean, height: 120 },
+          { label: "영어", text: row.english, emphasis: true, height: 160 },
+          { label: "끊어 읽기", text: row.chunks.join("  /  "), height: 160 },
         ];
         // 핵심 어구는 세트에 하나라도 있으면 모든 카드에 같은 칸으로 둬서 칸 배치가 달라지지 않게 한다.
         if (hasKeyPhrases) {

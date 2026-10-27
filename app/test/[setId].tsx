@@ -6,10 +6,12 @@ import { supabase } from "../../lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
+import { isTestKind, KIND_TITLES } from "../../lib/study";
+import { roundRoute, type TestKind } from "../../lib/weekly";
 import {
   friendlyTestError,
   getTestStatus,
-  RETEST_DESCRIPTION,
+  retestDescription,
   ROUND_TITLE,
   startAttempt,
   startLabel,
@@ -27,6 +29,7 @@ const isExamRound = (roundNo: number) => roundNo === 1 || roundNo === 3;
 // 시험 회차 한 장. 끝낸 회차는 점수가 있는 작은 줄(눌러서 결과 보기)이고,
 // 지금 응시할 회차(current)는 테두리가 강조된 큰 카드에 시작 버튼이 들어 있다.
 function RoundCard({
+  kind,
   roundNo,
   round,
   timing,
@@ -36,6 +39,7 @@ function RoundCard({
   onStart,
   onPress,
 }: {
+  kind: TestKind;
   roundNo: number;
   round: TestRound | undefined;
   // 응시한 회차는 그 회차의 기록, 아직 안 푼 시험은 지금 시작하면 적용될 값.
@@ -89,11 +93,11 @@ function RoundCard({
         <Text className="mt-2 text-2xl font-extrabold text-ink">
           {ROUND_TITLE[roundNo]}
         </Text>
-        {(round?.status === "in_progress" || RETEST_DESCRIPTION[roundNo]) && (
+        {(round?.status === "in_progress" || retestDescription(roundNo, kind)) && (
           <Text className="mt-1 text-sm text-ink-soft">
             {round?.status === "in_progress"
               ? "풀던 시험을 이어서 풀어요"
-              : RETEST_DESCRIPTION[roundNo]}
+              : retestDescription(roundNo, kind)}
           </Text>
         )}
         <Pressable
@@ -143,7 +147,7 @@ function RoundCard({
         <Text className="mt-1 text-sm text-ink-soft">
           {round
             ? `${round.correct_count ?? 0} / ${round.total_count} 정답`
-            : (RETEST_DESCRIPTION[roundNo] ?? "아직 시작하지 않았어요")}
+            : (retestDescription(roundNo, kind) ?? "아직 시작하지 않았어요")}
         </Text>
       </View>
       <View className="flex-row items-center gap-1">
@@ -159,7 +163,9 @@ function RoundCard({
 }
 
 export default function TestOverviewScreen() {
-  const { setId } = useLocalSearchParams<{ setId: string }>();
+  const { setId, kind: kindParam } = useLocalSearchParams<{ setId: string; kind?: string }>();
+  // 단어(기본) 외에 어순/순서/문장 배열도 같은 회차 화면을 쓴다.
+  const kind: TestKind = isTestKind(kindParam) ? kindParam : "vocab";
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState<TestStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,18 +186,18 @@ export default function TestOverviewScreen() {
     try {
       const [{ data: set }, nextStatus] = await Promise.all([
         supabase
-          .from("vocab_sets")
+          .from(`${kind}_sets`)
           .select("title")
           .eq("id", setId)
           .maybeSingle(),
-        getTestStatus(setId),
+        getTestStatus(setId, kind),
       ]);
       setTitle(set?.title ?? "");
       setStatus(nextStatus);
     } catch (e) {
       setError(friendlyTestError(e));
     }
-  }, [setId]);
+  }, [setId, kind]);
 
   // 문제를 풀고 돌아올 때마다 최신 진행 상황을 다시 불러온다.
   useFocusEffect(
@@ -222,6 +228,12 @@ export default function TestOverviewScreen() {
 
   const onPrimary = async () => {
     if (!status) return;
+    // 단어 외 유형은 회차 번호를 들고 해당 풀이 화면으로 간다(문제는 화면이 서버에서 받는다).
+    if (kind !== "vocab") {
+      const round = inProgress?.round_no ?? status.next_round;
+      if (round) router.push(roundRoute(kind, setId, round));
+      return;
+    }
     if (inProgress) {
       router.push(`/attempt/${inProgress.attempt_id}`);
       return;
@@ -243,12 +255,15 @@ export default function TestOverviewScreen() {
     : status?.next_round
       ? status.rounds.length === 0
         ? "테스트 시작"
-        : startLabel(status.next_round)
+        : startLabel(status.next_round, kind)
       : "";
 
   return (
     <View className="flex-1 bg-blush">
-      <ScreenHeader title="단어 테스트" back />
+      <ScreenHeader
+        title={kind === "vocab" ? "단어 테스트" : `${KIND_TITLES[kind]} 테스트`}
+        back
+      />
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -319,6 +334,7 @@ export default function TestOverviewScreen() {
                   .map((roundNo) => (
                     <RoundCard
                       key={roundNo}
+                      kind={kind}
                       roundNo={roundNo}
                       round={status.rounds.find(
                         (round) => round.round_no === roundNo,
@@ -338,7 +354,8 @@ export default function TestOverviewScreen() {
                             round.round_no === roundNo &&
                             round.status === "completed",
                         );
-                        return done
+                        // 응시 기록이 있는 회차(단어)만 눌러서 틀린 문제를 본다.
+                        return done?.attempt_id
                           ? () => router.push(`/result/${done.attempt_id}`)
                           : undefined;
                       })()}

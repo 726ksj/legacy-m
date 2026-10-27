@@ -4,11 +4,14 @@ import { supabase } from "./supabase";
 export type TestKind = "vocab" | "writing" | "order" | "sentence";
 
 // 시험 종류별 풀이 화면 경로.
+// 모든 유형이 같은 회차 현황 화면(/test)으로 들어가고, 거기서 지금 볼 회차를 시작한다.
 export function testRoute(kind: TestKind, id: string) {
-  if (kind === "vocab") return `/test/${id}` as const;
-  if (kind === "writing") return `/writing/${id}` as const;
-  if (kind === "order") return `/order/${id}` as const;
-  return `/sentence/${id}` as const;
+  return (kind === "vocab" ? `/test/${id}` : `/test/${id}?kind=${kind}`) as `/test/${string}`;
+}
+
+// 회차 현황 화면에서 한 회차의 풀이 화면으로 가는 경로(단어는 시험을 만들어 attempt 화면으로 간다).
+export function roundRoute(kind: Exclude<TestKind, "vocab">, id: string, round: number) {
+  return `/${kind}/${id}?round=${round}` as `/writing/${string}`;
 }
 
 export type TaskStatus = "not_started" | "in_progress" | "completed";

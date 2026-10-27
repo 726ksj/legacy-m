@@ -220,7 +220,8 @@ export default function AttemptScreen() {
         <ResultView attempt={attempt} />
       ) : (
         question && (
-          <ScrollView contentContainerClassName="px-6 py-6 gap-6">
+          <View className="flex-1">
+          <ScrollView className="flex-1" contentContainerClassName="px-6 py-6 gap-6">
             <View>
               <View className="h-2 rounded-full bg-white">
                 <View
@@ -278,19 +279,22 @@ export default function AttemptScreen() {
                 </Text>
               </View>
             )}
-
-            <AnswerActions
-              answered={answered}
-              hasSelection={pendingIndex !== null}
-              submitting={submitting}
-              onCancel={() => setPendingIndex(null)}
-              onConfirm={onConfirm}
-              onNext={onNext}
-              nextLabel={
-                attempt.status === "completed" ? "결과 보기" : "다음 문제"
-              }
-            />
           </ScrollView>
+          {/* 취소/확인/다음 문제 버튼은 스크롤 밖 화면 맨 아래에 고정한다. */}
+          <View className="px-6 pb-6 pt-3">
+          <AnswerActions
+            answered={answered}
+            hasSelection={pendingIndex !== null}
+            submitting={submitting}
+            onCancel={() => setPendingIndex(null)}
+            onConfirm={onConfirm}
+            onNext={onNext}
+            nextLabel={
+              attempt.status === "completed" ? "결과 보기" : "다음 문제"
+            }
+          />
+          </View>
+          </View>
         )
       )}
     </View>

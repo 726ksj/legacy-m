@@ -15,6 +15,7 @@ import {
 import AnswerActions from "../../components/AnswerActions";
 import ChoiceButton from "../../components/ChoiceButton";
 import ScreenHeader from "../../components/ScreenHeader";
+import { ROUND_TITLE } from "../../lib/test";
 import { Text } from "../../components/AppText";
 
 const palette = categoryColors.order;
@@ -29,7 +30,9 @@ function Summary({ progress }: { progress: OrderProgress }) {
         end={{ x: 1, y: 1 }}
         style={{ borderRadius: 28, paddingHorizontal: 22, paddingVertical: 24 }}
       >
-        <Text className="text-sm font-bold text-cream">{progress.title}</Text>
+        <Text className="text-sm font-bold text-cream">
+          {ROUND_TITLE[progress.round_no]} · {progress.title}
+        </Text>
         <Text className="mt-1 text-5xl font-extrabold text-white">
           {progress.score ?? 0}점
         </Text>
@@ -84,7 +87,9 @@ function Summary({ progress }: { progress: OrderProgress }) {
 }
 
 export default function OrderScreen() {
-  const { setId } = useLocalSearchParams<{ setId: string }>();
+  const { setId, round: roundParam } = useLocalSearchParams<{ setId: string; round?: string }>();
+  // 회차 현황 화면에서 넘겨 준 회차. 없으면 서버가 지금 풀 회차를 정한다.
+  const round = Number(roundParam) || undefined;
   const [progress, setProgress] = useState<OrderProgress | null>(null);
   const [position, setPosition] = useState(0);
   const [attempt, setAttempt] = useState<OrderAttempt | null>(null);
@@ -101,7 +106,7 @@ export default function OrderScreen() {
     setCorrectOption(null);
     setPendingIndex(null);
     setPosition(index);
-    setAttempt(await startOrderAttempt(loaded.questions[index].question_id));
+    setAttempt(await startOrderAttempt(loaded.questions[index].question_id, loaded.round_no));
   }, []);
 
   const load = useCallback(async () => {
@@ -114,7 +119,7 @@ export default function OrderScreen() {
       return;
     }
     try {
-      const loaded = await getOrderProgress(setId);
+      const loaded = await getOrderProgress(setId, round);
       setProgress(loaded);
       if (loaded.completed || loaded.total === 0) {
         setShowSummary(true);
@@ -126,7 +131,7 @@ export default function OrderScreen() {
     } catch (e) {
       setError(friendlyOrderError(e));
     }
-  }, [setId, openQuestion]);
+  }, [setId, round, openQuestion]);
 
   useEffect(() => {
     load().finally(() => setLoading(false));
@@ -142,7 +147,7 @@ export default function OrderScreen() {
       setCorrectOption(result.correct_option);
       setPendingIndex(null);
       // 진행 상황(점수, 완료 여부)을 다시 받아 둔다.
-      setProgress(await getOrderProgress(setId));
+      setProgress(await getOrderProgress(setId, round));
     } catch (e) {
       setError(friendlyOrderError(e));
     } finally {
@@ -152,7 +157,7 @@ export default function OrderScreen() {
 
   const onNext = async () => {
     if (!progress) return;
-    const latest = await getOrderProgress(setId).catch(() => progress);
+    const latest = await getOrderProgress(setId, round).catch(() => progress);
     setProgress(latest);
     const nextIndex = latest.questions.findIndex(
       (q, i) => i > position && !q.answered,
@@ -179,7 +184,7 @@ export default function OrderScreen() {
   return (
     <View className="flex-1 bg-blush">
       <ScreenHeader
-        title="순서 배열"
+        title={progress ? ROUND_TITLE[progress.round_no] : "순서 배열"}
         back
         right={
           progress && !showSummary ? (

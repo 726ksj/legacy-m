@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { fetchOrderOverview, type OrderOverviewRow } from "./order";
 import { fetchSentenceOverview, type SentenceOverviewRow } from "./sentence";
+import { fetchWritingOverview, type WritingOverviewRow } from "./writing";
 import { fetchWeeklyCourses, type TestKind } from "./weekly";
 import type { SetStatus } from "./progress";
 
@@ -43,13 +44,6 @@ interface VocabAssignmentRow {
   vocab_sets: { id: string; title: string; week: number | null } | null;
 }
 
-interface WritingSetRow {
-  id: string;
-  title: string;
-  week: number | null;
-  course_id: string;
-}
-
 const TIMING_LABEL = { late: "지각", overdue: "기한 초과" } as const;
 
 const kindOf = (row: {
@@ -66,11 +60,9 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
   const [
     courses,
     { data: assignments },
-    { data: writingSets },
     { data: vocabResults },
-    { data: writingResults },
     { data: vocabAttempts },
-    { data: writingAttempts },
+    writingOverview,
     orderOverview,
     sentenceOverview,
   ] = await Promise.all([
@@ -80,26 +72,16 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
       .select("course_id, vocab_sets(id, title, week)")
       .returns<VocabAssignmentRow[]>(),
     supabase
-      .from("writing_sets")
-      .select("id, title, week, course_id")
-      .returns<WritingSetRow[]>(),
-    supabase
       .from("vocab_test_results")
       .select("vocab_set_id, score, total_count, correct_count, tested_at")
       .order("tested_at", { ascending: false }),
     supabase
-      .from("writing_set_completions")
-      .select("writing_set_id, points, max_points, completed_at"),
-    supabase
       .from("vocab_test_attempts")
       .select("vocab_set_id, round_no, is_late, is_overdue")
       .order("round_no", { ascending: true }),
-    supabase
-      .from("writing_attempts")
-      .select("writing_set_id, is_late, is_overdue")
-      .order("started_at", { ascending: true }),
     // 순서 배열은 정답이 걸려 있어 서버 함수로만 진행 상황을 받는다. 불러오지 못해도
     // 나머지 결과는 보여 준다.
+    fetchWritingOverview().catch(() => [] as WritingOverviewRow[]),
     fetchOrderOverview().catch(() => [] as OrderOverviewRow[]),
     fetchSentenceOverview().catch(() => [] as SentenceOverviewRow[]),
   ]);
@@ -118,10 +100,6 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
       });
     }
   }
-  const writingResultBySet = new Map(
-    (writingResults ?? []).map((r) => [r.writing_set_id, r]),
-  );
-
   // 응시 기록이 있는 세트(진행 중 판단)와 지각/기한 초과 표시.
   const vocabStarted = new Set<string>();
   const vocabTimings = new Map<string, TimingTag[]>();
@@ -137,18 +115,6 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
     });
     vocabTimings.set(row.vocab_set_id, tags);
   }
-  const writingStarted = new Set<string>();
-  const writingTimings = new Map<string, TimingTag[]>();
-  for (const row of writingAttempts ?? []) {
-    if (writingStarted.has(row.writing_set_id)) continue;
-    writingStarted.add(row.writing_set_id);
-    const kind = kindOf(row);
-    writingTimings.set(
-      row.writing_set_id,
-      kind ? [{ label: TIMING_LABEL[kind], kind }] : [],
-    );
-  }
-
   const vocabTest = (
     set: NonNullable<VocabAssignmentRow["vocab_sets"]>,
   ): WeekTest => {
@@ -170,25 +136,6 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
     };
   };
 
-  const writingTest = (set: WritingSetRow): WeekTest => {
-    const done = writingResultBySet.get(set.id);
-    return {
-      kind: "writing",
-      id: set.id,
-      title: set.title,
-      week: set.week,
-      status: done
-        ? "completed"
-        : writingStarted.has(set.id)
-          ? "in_progress"
-          : "not_started",
-      scoreLabel: done ? `${done.points} / ${done.max_points}점` : null,
-      detail: done ? "모든 문장 완성" : null,
-      date: done?.completed_at ?? null,
-      timings: writingTimings.get(set.id) ?? [],
-    };
-  };
-
   const orderTest = (row: OrderOverviewRow): WeekTest => {
     const kind = row.is_overdue ? "overdue" : row.is_late ? "late" : null;
     return {
@@ -202,11 +149,19 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
           ? "in_progress"
           : "not_started",
       scoreLabel: row.completed ? `${row.score}점` : null,
-      detail: row.completed ? `${row.correct}/${row.total}개 정답` : null,
+      // 종합 점수 옆에 1차·2차 시험 점수를 같이 보여 준다.
+      detail: row.completed
+        ? `1차 ${row.first_score ?? 0}점 · 2차 ${row.final_score ?? 0}점`
+        : null,
       date: row.completed_at,
       timings: kind ? [{ label: TIMING_LABEL[kind], kind }] : [],
     };
   };
+
+  const writingTest = (row: WritingOverviewRow): WeekTest => ({
+    ...orderTest(row as unknown as OrderOverviewRow),
+    kind: "writing",
+  });
 
   const sentenceTest = (row: SentenceOverviewRow): WeekTest => ({
     ...orderTest(row as unknown as OrderOverviewRow),
@@ -231,8 +186,8 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
       ...(assignments ?? [])
         .filter((a) => a.course_id === course.course_id && a.vocab_sets)
         .map((a) => vocabTest(a.vocab_sets!)),
-      ...(writingSets ?? [])
-        .filter((s) => s.course_id === course.course_id)
+      ...writingOverview
+        .filter((o) => o.course_id === course.course_id)
         .map(writingTest),
       ...orderOverview
         .filter((o) => o.course_id === course.course_id)

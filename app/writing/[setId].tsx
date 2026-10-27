@@ -17,6 +17,7 @@ import {
   type WritingSentence,
   type WritingSubmitResult,
 } from "../../lib/writing";
+import { ROUND_TITLE } from "../../lib/test";
 import ScreenHeader from "../../components/ScreenHeader";
 
 type Mode = "arrange" | "result" | "summary";
@@ -24,7 +25,7 @@ type Mode = "arrange" | "result" | "summary";
 const HEADER_TITLE: Record<Mode, string> = {
   arrange: "배열 풀이",
   result: "정답 확인",
-  summary: "어순 배열 결과",
+  summary: "회차 결과",
 };
 
 // 배열 단위를 칩으로 보여준다.
@@ -89,8 +90,11 @@ function SecondaryButton({
 }
 
 export default function WritingStudyScreen() {
-  const { setId } = useLocalSearchParams<{ setId: string }>();
+  const { setId, round: roundParam } = useLocalSearchParams<{ setId: string; round?: string }>();
+  // 회차 현황 화면에서 넘겨 준 회차. 없으면 서버가 지금 풀 회차를 정한다.
+  const round = Number(roundParam) || undefined;
   const [title, setTitle] = useState("");
+  // 이 회차에 나오는 문장들(1·2차 시험은 전체, 재시험은 틀린 문장만).
   const [sentences, setSentences] = useState<WritingSentence[]>([]);
   const [progress, setProgress] = useState<WritingProgress | null>(null);
   const [mode, setMode] = useState<Mode>("arrange");
@@ -105,29 +109,32 @@ export default function WritingStudyScreen() {
 
   const refreshProgress = useCallback(async () => {
     try {
-      setProgress(await getWritingProgress(setId));
+      setProgress(await getWritingProgress(setId, round));
     } catch (e) {
       setError(friendlyWritingError(e));
     }
-  }, [setId]);
+  }, [setId, round]);
 
   // 문장 하나의 배열 풀이를 시작한다(암기는 학습 화면의 [암기]에서 따로 한다).
-  const begin = useCallback(async (target: WritingSentence, targetIndex: number) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const started = await startWritingAttempt(target.id);
-      setIndex(targetIndex);
-      setAttempt(started);
-      setSelectedIds([]);
-      setResult(null);
-      setMode("arrange");
-    } catch (e) {
-      setError(friendlyWritingError(e));
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const begin = useCallback(
+    async (target: WritingSentence, targetIndex: number, roundNo: number) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const started = await startWritingAttempt(target.id, roundNo);
+        setIndex(targetIndex);
+        setAttempt(started);
+        setSelectedIds([]);
+        setResult(null);
+        setMode("arrange");
+      } catch (e) {
+        setError(friendlyWritingError(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [],
+  );
 
   const load = useCallback(async () => {
     setError(null);
@@ -139,25 +146,28 @@ export default function WritingStudyScreen() {
       return;
     }
     try {
-      const loaded = await fetchWritingSet(setId);
+      const [loaded, loadedProgress] = await Promise.all([
+        fetchWritingSet(setId),
+        getWritingProgress(setId, round),
+      ]);
       setTitle(loaded.title);
-      setSentences(loaded.sentences);
-      const loadedProgress = await getWritingProgress(setId);
       setProgress(loadedProgress);
-      // 아직 완성하지 못한 첫 문장부터 바로 배열을 시작한다. 모두 완성했으면 결과를 보여 준다.
-      const firstOpen = loaded.sentences.findIndex(
-        (s) =>
-          !loadedProgress.sentences.find((p) => p.sentence_id === s.id)?.completed,
-      );
+      // 이 회차에 나오는 문장만, 문제 번호 순서대로.
+      const inRound = loadedProgress.questions
+        .map((q) => loaded.sentences.find((s) => s.id === q.question_id))
+        .filter((s): s is WritingSentence => s !== undefined);
+      setSentences(inRound);
+      // 아직 풀지 않은 첫 문장부터 바로 배열을 시작한다. 모두 풀었으면 결과를 보여 준다.
+      const firstOpen = loadedProgress.questions.findIndex((q) => !q.answered);
       if (firstOpen === -1) {
         setMode("summary");
       } else {
-        await begin(loaded.sentences[firstOpen], firstOpen);
+        await begin(inRound[firstOpen], firstOpen, loadedProgress.round_no);
       }
     } catch (e) {
       setError(friendlyWritingError(e));
     }
-  }, [setId, begin]);
+  }, [setId, round, begin]);
 
   useEffect(() => {
     load().finally(() => setLoading(false));
@@ -165,11 +175,6 @@ export default function WritingStudyScreen() {
 
   const sentence = sentences[index];
   const isLast = index === sentences.length - 1;
-
-  // 결과 화면의 "다시 풀기": 같은 문장을 새로 시작한다.
-  const startArrange = () => {
-    if (sentence) begin(sentence, index);
-  };
 
   const submit = async () => {
     if (!attempt) return;
@@ -191,19 +196,14 @@ export default function WritingStudyScreen() {
   };
 
   const goNext = async () => {
-    if (isLast) {
+    if (isLast || !progress) {
       setBusy(true);
       await refreshProgress();
       setBusy(false);
       setMode("summary");
       return;
     }
-    await begin(sentences[index + 1], index + 1);
-  };
-
-  const jumpTo = (sentenceId: string) => {
-    const target = sentences.findIndex((s) => s.id === sentenceId);
-    if (target >= 0) begin(sentences[target], target);
+    await begin(sentences[index + 1], index + 1, progress.round_no);
   };
 
   const showCounter = mode !== "summary" && sentences.length > 0;
@@ -211,7 +211,9 @@ export default function WritingStudyScreen() {
   return (
     <View className="flex-1 bg-blush">
       <ScreenHeader
-        title={HEADER_TITLE[mode]}
+        title={
+          progress && mode !== "result" ? ROUND_TITLE[progress.round_no] : HEADER_TITLE[mode]
+        }
         back
         right={
           showCounter ? (
@@ -235,7 +237,12 @@ export default function WritingStudyScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerClassName="px-6 py-6 gap-5">
+        <View className="flex-1">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="px-6 py-6 gap-5"
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
           <Text className="text-base font-bold text-ink-soft">{title}</Text>
 
           {progress?.is_late && (
@@ -284,7 +291,8 @@ export default function WritingStudyScreen() {
                 </Text>
               </View>
 
-              <View className="min-h-[88px] rounded-3xl border-2 border-dashed border-brand/40 bg-white px-4 py-4">
+              {/* 내 답안 칸은 높이를 고정한다(단어를 고르는 만큼 아래 영역이 밀리지 않게). 넘치면 칸 안에서 스크롤. */}
+              <View className="h-[168px] rounded-3xl border-2 border-dashed border-brand/40 bg-white px-4 py-4">
                 <Text className="mb-2 text-sm font-bold text-ink-soft">
                   내 답안
                 </Text>
@@ -293,6 +301,7 @@ export default function WritingStudyScreen() {
                     아래 단어를 눌러 문장을 만들어요
                   </Text>
                 ) : (
+                  <ScrollView nestedScrollEnabled className="flex-1">
                   <View className="flex-row flex-wrap gap-2">
                     {selectedIds.map((id) => {
                       const piece = attempt.pieces.find((p) => p.id === id);
@@ -311,6 +320,7 @@ export default function WritingStudyScreen() {
                       );
                     })}
                   </View>
+                  </ScrollView>
                 )}
               </View>
 
@@ -318,45 +328,26 @@ export default function WritingStudyScreen() {
                 <Text className="mb-2 text-sm font-bold text-ink-soft">
                   단어 목록
                 </Text>
+                {/* 고른 단어도 자리를 그대로 두고 안 보이게만 해서, 아래 버튼들이 움직이지 않는다. */}
                 <View className="flex-row flex-wrap gap-2">
-                  {attempt.pieces
-                    .filter((p) => !selectedIds.includes(p.id))
-                    .map((piece) => (
+                  {attempt.pieces.map((piece) => {
+                    const used = selectedIds.includes(piece.id);
+                    return (
                       <Pressable
                         key={piece.id}
+                        disabled={used}
                         onPress={() =>
                           setSelectedIds((ids) => [...ids, piece.id])
                         }
+                        style={{ opacity: used ? 0 : 1 }}
                         className="rounded-xl border border-line bg-white px-3 py-2"
                       >
                         <Text className="text-lg font-semibold text-ink">
                           {piece.text}
                         </Text>
                       </Pressable>
-                    ))}
-                </View>
-              </View>
-
-              <View className="gap-3">
-                <View className="flex-row gap-3">
-                  <SecondaryButton
-                    label="단어 취소"
-                    disabled={selectedIds.length === 0}
-                    onPress={() => setSelectedIds((ids) => ids.slice(0, -1))}
-                  />
-                  <SecondaryButton
-                    label="처음부터"
-                    disabled={selectedIds.length === 0}
-                    onPress={() => setSelectedIds([])}
-                  />
-                </View>
-                <View className="flex-row">
-                  <PrimaryButton
-                    label="정답 확인"
-                    disabled={selectedIds.length !== attempt.pieces.length}
-                    loading={busy}
-                    onPress={submit}
-                  />
+                    );
+                  })}
                 </View>
               </View>
             </>
@@ -386,27 +377,9 @@ export default function WritingStudyScreen() {
                   >
                     {result.is_correct
                       ? "정답이에요!"
-                      : "아쉬워요, 다시 확인해 봐요"}
+                      : "아쉬워요"}
                   </Text>
                 </View>
-                {result.is_correct && result.sentence_completed && (
-                  <Text className="mt-2 text-base font-semibold text-emerald-700">
-                    {result.attempt_no === 1
-                      ? "첫 시도에 맞혔어요"
-                      : `${result.attempt_no}번째 시도에 맞혔어요`}{" "}
-                    · +{result.points}점
-                  </Text>
-                )}
-                {result.is_correct && result.was_already_completed && (
-                  <Text className="mt-2 text-base text-ink-soft">
-                    이미 완성한 문장이라 점수는 그대로예요
-                  </Text>
-                )}
-                {!result.is_correct && result.order_accuracy !== undefined && (
-                  <Text className="mt-2 text-base text-ink-soft">
-                    어순 정확도 {Math.round(result.order_accuracy * 100)}%
-                  </Text>
-                )}
               </View>
 
               {!result.is_correct && result.submitted_chunks && (
@@ -420,7 +393,7 @@ export default function WritingStudyScreen() {
                 </View>
               )}
 
-              <View className="rounded-3xl border border-line bg-white px-6 py-6 shadow-sm shadow-brand/20">
+              <View className="flex-1 rounded-3xl border border-line bg-white px-6 py-6 shadow-sm shadow-brand/20">
                 <View className="self-start rounded-full bg-cream px-3 py-1">
                   <Text className="text-sm font-bold text-berry">우리말</Text>
                 </View>
@@ -439,19 +412,6 @@ export default function WritingStudyScreen() {
                   <ChunkChips chunks={result.chunks} />
                 </View>
               </View>
-
-              <View className="flex-row gap-3">
-                <SecondaryButton
-                  label="다시 풀기"
-                  onPress={startArrange}
-                  disabled={busy}
-                />
-                <PrimaryButton
-                  label={isLast ? "결과 보기" : "다음 문장"}
-                  onPress={goNext}
-                  loading={busy}
-                />
-              </View>
             </>
           )}
 
@@ -468,15 +428,13 @@ export default function WritingStudyScreen() {
                 }}
               >
                 <Text className="text-sm font-bold text-cream">
-                  {progress.passed ? "어순 배열 통과" : "진행 중"}
+                  {ROUND_TITLE[progress.round_no]} · {progress.title}
                 </Text>
                 <Text className="mt-1 text-5xl font-extrabold text-white">
-                  {progress.points} / {progress.max_points}점
+                  {progress.score ?? 0}점
                 </Text>
                 <Text className="mt-2 text-base text-white/90">
-                  완성 {progress.completed}/{progress.total}문장
-                  {progress.first_try_rate !== null &&
-                    ` · 첫 시도 정답률 ${progress.first_try_rate}%`}
+                  {progress.total}문장 중 {progress.correct}개 정답
                 </Text>
               </LinearGradient>
 
@@ -484,9 +442,9 @@ export default function WritingStudyScreen() {
                 <Text className="text-base font-bold text-ink-soft">
                   문장별 결과
                 </Text>
-                {progress.sentences.map((item) => (
+                {progress.questions.map((item) => (
                   <View
-                    key={item.sentence_id}
+                    key={item.question_id}
                     className="flex-row items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4 py-3"
                   >
                     <View className="flex-1">
@@ -497,39 +455,67 @@ export default function WritingStudyScreen() {
                         className="mt-0.5 text-base text-ink"
                         numberOfLines={2}
                       >
-                        {item.korean}
+                        {sentences.find((x) => x.id === item.question_id)?.korean}
                       </Text>
                     </View>
-                    {item.completed ? (
-                      <View className="rounded-full bg-emerald-50 px-2.5 py-1">
-                        <Text className="text-sm font-bold text-emerald-600">
-                          +{item.points}점
-                        </Text>
-                      </View>
-                    ) : (
-                      <Pressable
-                        onPress={() => jumpTo(item.sentence_id)}
-                        className="rounded-full bg-brand px-3 py-1.5"
+                    <View
+                      className={`rounded-full px-2.5 py-1 ${
+                        item.is_correct ? "bg-emerald-50" : "bg-red-50"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-bold ${
+                          item.is_correct ? "text-emerald-600" : "text-red-600"
+                        }`}
                       >
-                        <Text className="text-sm font-bold text-white">
-                          다시 풀기
-                        </Text>
-                      </Pressable>
-                    )}
+                        {item.is_correct ? "정답" : "오답"}
+                      </Text>
+                    </View>
                   </View>
                 ))}
               </View>
 
               <View className="flex-row gap-3">
-                <SecondaryButton
-                  label="처음부터 다시"
-                  onPress={() => begin(sentences[0], 0)}
-                />
-                <PrimaryButton label="목록으로" onPress={() => router.back()} />
+                <PrimaryButton label="완료" onPress={() => router.back()} />
               </View>
             </>
           )}
         </ScrollView>
+        {/* 배열 풀이의 버튼은 스크롤 밖 화면 맨 아래에 고정한다. */}
+        {mode === "arrange" && attempt && (
+          <View className="gap-3 px-6 pb-6 pt-3">
+            <View className="flex-row gap-3">
+              <SecondaryButton
+                label="단어 취소"
+                disabled={selectedIds.length === 0}
+                onPress={() => setSelectedIds((ids) => ids.slice(0, -1))}
+              />
+              <SecondaryButton
+                label="처음부터"
+                disabled={selectedIds.length === 0}
+                onPress={() => setSelectedIds([])}
+              />
+            </View>
+            <View className="flex-row">
+              <PrimaryButton
+                label="정답 확인"
+                disabled={selectedIds.length !== attempt.pieces.length}
+                loading={busy}
+                onPress={submit}
+              />
+            </View>
+          </View>
+        )}
+        {mode === "result" && result && (
+          <View className="flex-row gap-3 px-6 pb-6 pt-3">
+            <PrimaryButton
+              label={isLast ? "결과 보기" : "다음 문제"}
+              onPress={goNext}
+              loading={busy}
+            />
+          </View>
+        )}
+        </View>
       )}
     </View>
   );

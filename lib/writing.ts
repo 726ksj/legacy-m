@@ -98,7 +98,8 @@ export interface WritingAttemptStart {
   order_no: number;
   korean: string;
   pieces: WritingPiece[];
-  already_completed: boolean;
+  // 이미 제출한 문장이면 true(회차에서 문장마다 한 번만 푼다).
+  answered: boolean;
 }
 
 export interface WritingSubmitResult {
@@ -109,35 +110,53 @@ export interface WritingSubmitResult {
   chunks: string[];
   submitted_chunks?: string[];
   order_accuracy?: number;
-  // 이번 제출로 새로 얻은 문장 점수(첫 시도 5 · 2번째 3 · 3번째 이후 1).
-  points?: number;
-  sentence_completed?: boolean;
-  was_already_completed?: boolean;
-  set_completed?: boolean;
+  round_no: number;
+  // 이 제출로 회차의 마지막 문장을 끝냈는지.
+  round_completed: boolean;
+  set_completed: boolean;
   already_submitted?: boolean;
 }
 
-export interface WritingSentenceProgress {
-  sentence_id: string;
+export interface WritingQuestionProgress {
+  question_id: string;
   order_no: number;
-  korean: string;
-  attempts: number;
-  completed: boolean;
-  first_try_correct: boolean;
-  points: number;
+  attempt_id: string | null;
+  answered: boolean;
+  is_correct: boolean | null;
 }
 
+// 한 회차의 진행 상황(그 회차에 나오는 문장들).
 export interface WritingProgress {
-  sentences: WritingSentenceProgress[];
+  title: string;
+  week: number | null;
+  round_no: number;
+  questions: WritingQuestionProgress[];
   total: number;
-  completed: number;
-  points: number;
-  max_points: number;
-  first_try_rate: number | null;
-  passed: boolean;
+  answered: number;
+  correct: number;
+  completed: boolean;
+  score: number | null;
   // 주차 종료 후 5일 이내에 응시하는 경우(지각 응시).
   is_late: boolean;
   // 주차 종료 후 5일이 지나 응시하는 경우(기한 초과).
+  is_overdue: boolean;
+}
+
+// 내가 볼 수 있는 모든 어순 배열 세트와 결과(학습 결과·홈 요약용). 순서/문장 배열과 같은 모양.
+export interface WritingOverviewRow {
+  id: string;
+  title: string;
+  week: number | null;
+  course_id: string;
+  total: number;
+  answered: number;
+  completed: boolean;
+  score: number | null;
+  correct: number | null;
+  first_score: number | null;
+  final_score: number | null;
+  completed_at: string | null;
+  is_late: boolean;
   is_overdue: boolean;
 }
 
@@ -147,9 +166,10 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
-export const startWritingAttempt = (sentenceId: string) =>
+export const startWritingAttempt = (sentenceId: string, round: number) =>
   rpc<WritingAttemptStart>("start_writing_attempt", {
     p_sentence_id: sentenceId,
+    p_round: round,
   });
 
 export const submitWritingAttempt = (attemptId: string, pieceIds: number[]) =>
@@ -158,8 +178,14 @@ export const submitWritingAttempt = (attemptId: string, pieceIds: number[]) =>
     p_piece_ids: pieceIds,
   });
 
-export const getWritingProgress = (setId: string) =>
-  rpc<WritingProgress>("get_writing_set_progress", { p_set_id: setId });
+export const fetchWritingOverview = () => rpc<WritingOverviewRow[]>("get_writing_overview", {});
+
+// round를 생략하면 지금 풀 회차(풀던 회차 또는 다음 회차)의 진행 상황.
+export const getWritingProgress = (setId: string, round?: number) =>
+  rpc<WritingProgress>("get_writing_set_progress", {
+    p_set_id: setId,
+    p_round: round ?? null,
+  });
 
 export function friendlyWritingError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);

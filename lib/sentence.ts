@@ -14,6 +14,8 @@ export interface SentenceQuestionProgress {
 export interface SentenceProgress {
   title: string;
   week: number | null;
+  // 이 진행 상황이 가리키는 회차(1~5).
+  round_no: number;
   questions: SentenceQuestionProgress[];
   total: number;
   answered: number;
@@ -49,6 +51,8 @@ export interface SentenceAttempt {
 }
 
 export interface SentenceAnswerResult extends SentenceAttempt {
+  // 이 답으로 회차의 마지막 문제를 끝냈는지.
+  round_completed: boolean;
   set_completed: boolean;
 }
 
@@ -63,6 +67,9 @@ export interface SentenceOverviewRow {
   completed: boolean;
   score: number | null;
   correct: number | null;
+  // 1차·2차 시험 점수(완료 점수는 1차 40% + 2차 60%).
+  first_score: number | null;
+  final_score: number | null;
   completed_at: string | null;
   is_late: boolean;
   is_overdue: boolean;
@@ -80,11 +87,18 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
-export const getSentenceProgress = (setId: string) =>
-  rpc<SentenceProgress>("get_sentence_set_progress", { p_set_id: setId });
+// round를 생략하면 지금 풀 회차(풀던 회차 또는 다음 회차)의 진행 상황.
+export const getSentenceProgress = (setId: string, round?: number) =>
+  rpc<SentenceProgress>("get_sentence_set_progress", {
+    p_set_id: setId,
+    p_round: round ?? null,
+  });
 
-export const startSentenceAttempt = (questionId: string) =>
-  rpc<SentenceAttempt>("start_sentence_attempt", { p_question_id: questionId });
+export const startSentenceAttempt = (questionId: string, round: number) =>
+  rpc<SentenceAttempt>("start_sentence_attempt", {
+    p_question_id: questionId,
+    p_round: round,
+  });
 
 export const answerSentenceQuestion = (attemptId: string, order: number[]) =>
   rpc<SentenceAnswerResult>("answer_sentence_question", {

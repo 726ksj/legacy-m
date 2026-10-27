@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { fetchOrderOverview, type OrderOverviewRow } from "./order";
 import { fetchSentenceOverview, type SentenceOverviewRow } from "./sentence";
+import { fetchWritingOverview, type WritingOverviewRow } from "./writing";
 import type { TestKind } from "./weekly";
 
 export interface RecentScore {
@@ -54,14 +55,6 @@ interface VocabResultRow {
   vocab_sets: { title: string } | null;
 }
 
-interface WritingResultRow {
-  writing_set_id: string;
-  points: number;
-  max_points: number;
-  completed_at: string;
-  writing_sets: { title: string } | null;
-}
-
 const average = (items: RecentScore[]) =>
   items.length === 0
     ? null
@@ -72,7 +65,7 @@ export async function fetchHomeStats(): Promise<HomeStats> {
     { data: vocabAttempts },
     { data: writingAttempts },
     { data: vocabResults },
-    { data: writingResults },
+    writingOverview,
     orderOverview,
     sentenceOverview,
   ] = await Promise.all([
@@ -94,12 +87,7 @@ export async function fetchHomeStats(): Promise<HomeStats> {
       .order("tested_at", { ascending: false })
       .limit(6)
       .returns<VocabResultRow[]>(),
-    supabase
-      .from("writing_set_completions")
-      .select("writing_set_id, points, max_points, completed_at, writing_sets(title)")
-      .order("completed_at", { ascending: false })
-      .limit(6)
-      .returns<WritingResultRow[]>(),
+    fetchWritingOverview().catch(() => [] as WritingOverviewRow[]),
     fetchOrderOverview().catch(() => [] as OrderOverviewRow[]),
     fetchSentenceOverview().catch(() => [] as SentenceOverviewRow[]),
   ]);
@@ -114,6 +102,10 @@ export async function fetchHomeStats(): Promise<HomeStats> {
     (o) => o.completed && o.completed_at,
   );
   for (const o of orderDone) days.add(kstDay(o.completed_at!));
+  const writingDone = writingOverview.filter(
+    (o) => o.completed && o.completed_at,
+  );
+  for (const o of writingDone) days.add(kstDay(o.completed_at!));
   const sentenceDone = sentenceOverview.filter(
     (o) => o.completed && o.completed_at,
   );
@@ -168,20 +160,16 @@ export async function fetchHomeStats(): Promise<HomeStats> {
         label: `${Math.round(o.score ?? 0)}점`,
       },
     })),
-    ...(writingResults ?? []).map((r) => {
-      const percent =
-        r.max_points > 0 ? Math.round((r.points / r.max_points) * 100) : 0;
-      return {
-        date: r.completed_at,
-        item: {
-          key: `writing:${r.writing_set_id}`,
-          kind: "writing" as const,
-          title: r.writing_sets?.title ?? "어순 배열",
-          percent,
-          label: `${r.points}/${r.max_points}점`,
-        },
-      };
-    }),
+    ...writingDone.map((o) => ({
+      date: o.completed_at!,
+      item: {
+        key: `writing:${o.id}`,
+        kind: "writing" as const,
+        title: o.title,
+        percent: Math.round(o.score ?? 0),
+        label: `${Math.round(o.score ?? 0)}점`,
+      },
+    })),
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
     .map((entry) => entry.item);

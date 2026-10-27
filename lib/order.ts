@@ -14,6 +14,8 @@ export interface OrderQuestionProgress {
 export interface OrderProgress {
   title: string;
   week: number | null;
+  // 이 진행 상황이 가리키는 회차(1~5).
+  round_no: number;
   questions: OrderQuestionProgress[];
   total: number;
   answered: number;
@@ -46,6 +48,8 @@ export interface OrderAttempt {
 
 export interface OrderAnswerResult extends OrderAttempt {
   correct_option: string;
+  // 이 답으로 회차의 마지막 문제를 끝냈는지.
+  round_completed: boolean;
   set_completed: boolean;
 }
 
@@ -60,6 +64,9 @@ export interface OrderOverviewRow {
   completed: boolean;
   score: number | null;
   correct: number | null;
+  // 1차·2차 시험 점수(완료 점수는 1차 40% + 2차 60%).
+  first_score: number | null;
+  final_score: number | null;
   completed_at: string | null;
   is_late: boolean;
   is_overdue: boolean;
@@ -77,11 +84,18 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
-export const getOrderProgress = (setId: string) =>
-  rpc<OrderProgress>("get_order_set_progress", { p_set_id: setId });
+// round를 생략하면 지금 풀 회차(풀던 회차 또는 다음 회차)의 진행 상황.
+export const getOrderProgress = (setId: string, round?: number) =>
+  rpc<OrderProgress>("get_order_set_progress", {
+    p_set_id: setId,
+    p_round: round ?? null,
+  });
 
-export const startOrderAttempt = (questionId: string) =>
-  rpc<OrderAttempt>("start_order_attempt", { p_question_id: questionId });
+export const startOrderAttempt = (questionId: string, round: number) =>
+  rpc<OrderAttempt>("start_order_attempt", {
+    p_question_id: questionId,
+    p_round: round,
+  });
 
 export const answerOrderQuestion = (attemptId: string, selectedIndex: number) =>
   rpc<OrderAnswerResult>("answer_order_question", {
