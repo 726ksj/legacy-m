@@ -80,9 +80,10 @@ export default function StudyScreen() {
           </View>
         )}
 
-        <Text className="mt-6 text-base text-ink-soft">
-          학습할 유형을 선택하세요.
-        </Text>
+        {/* 학습 결과의 주차 칩 줄과 같은 높이(h-10)로 맞춰 아래 카드 위치가 같다. */}
+        <View className="mt-6 h-10 justify-center">
+          <Text className="text-base text-ink-soft">학습할 유형을 선택하세요.</Text>
+        </View>
 
         <View className="mt-4 gap-4">
           {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (

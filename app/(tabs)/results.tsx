@@ -159,29 +159,32 @@ export default function ResultsScreen() {
             )}
 
             {/* 학습 화면의 안내 문구 자리: 지금 선택된 주차(기본은 이번 주)를 칩으로 보여 주고 바꿀 수 있다. */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className={courses.length > 1 ? "mt-4" : "mt-6"}
-            >
-              <View className="flex-row gap-2">
-                {weeks.map((w) => (
-                  <Chip
-                    key={w}
-                    label={`${w}주차`}
-                    selected={selectedWeek === w}
-                    onPress={() => setWeek(w)}
-                  />
-                ))}
-                {hasNoWeek && (
-                  <Chip
-                    label="주차 미지정"
-                    selected={selectedWeek === NO_WEEK}
-                    onPress={() => setWeek(NO_WEEK)}
-                  />
-                )}
-              </View>
-            </ScrollView>
+            {/* 높이를 h-10으로 고정해 학습 화면의 안내 문구 줄과 같게 한다(아래 카드 위치가 같아진다). */}
+            <View className={`${courses.length > 1 ? "mt-4" : "mt-6"} h-10 justify-center`}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="flex-grow-0"
+              >
+                <View className="flex-row gap-2">
+                  {weeks.map((w) => (
+                    <Chip
+                      key={w}
+                      label={`${w}주차`}
+                      selected={selectedWeek === w}
+                      onPress={() => setWeek(w)}
+                    />
+                  ))}
+                  {hasNoWeek && (
+                    <Chip
+                      label="주차 미지정"
+                      selected={selectedWeek === NO_WEEK}
+                      onPress={() => setWeek(NO_WEEK)}
+                    />
+                  )}
+                </View>
+              </ScrollView>
+            </View>
 
             <View className="mt-4 gap-4">
               {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
