@@ -50,8 +50,13 @@ export default function ResultsKindScreen() {
 
   const title = kind ? KIND_TITLES[kind] : "학습 결과";
   const weekLabel = week === NO_WEEK ? "주차 미지정" : `${week}주차`;
+  // 결과 화면은 응시한 시험만 보여 준다(아직 안 본 시험은 학습 화면에서 본다).
   const tests =
-    course && kind ? testsOfWeek(course, week).filter((t) => t.kind === kind) : [];
+    course && kind
+      ? testsOfWeek(course, week).filter(
+          (t) => t.kind === kind && t.status !== "not_started",
+        )
+      : [];
 
   return (
     <View className="flex-1 bg-blush">
@@ -75,8 +80,8 @@ export default function ResultsKindScreen() {
           {tests.length === 0 ? (
             <EmptyState
               icon="document-text-outline"
-              title={`이 주차에는 ${title} 시험이 없어요`}
-              description="강사님이 시험을 등록하면 여기에 나타나요"
+              title={`이 주차에 응시한 ${title} 시험이 없어요`}
+              description="시험을 보면 결과가 여기에 쌓여요"
             />
           ) : (
             <View className="mt-3 gap-3">

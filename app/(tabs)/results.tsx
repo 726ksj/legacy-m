@@ -190,12 +190,15 @@ export default function ResultsScreen() {
               {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
                 <View key={row[0]} className="flex-row gap-4">
                   {row.map((kind) => {
-                    const count = tests.filter((t) => t.kind === kind).length;
+                    // 결과는 응시한 시험만 센다(아직 안 본 시험은 학습 화면에서 본다).
+                    const count = tests.filter(
+                      (t) => t.kind === kind && t.status !== "not_started",
+                    ).length;
                     return (
                       <KindCard
                         key={kind}
                         kind={kind}
-                        subtitle={count > 0 ? `시험 ${count}개` : "시험 없음"}
+                        subtitle={count > 0 ? `시험 ${count}개` : "응시한 시험 없음"}
                         onPress={() =>
                           router.push(
                             `/week-results/${kind}?course=${encodeURIComponent(course.key)}&week=${selectedWeek}` as never,
