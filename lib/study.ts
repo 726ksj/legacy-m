@@ -3,6 +3,7 @@ import { fetchWritingGroups } from "./writing";
 import { fetchOrderOverview } from "./order";
 import { fetchSentenceOverview } from "./sentence";
 import { fetchVocabStatuses } from "./progress";
+import { getTestStatus } from "./test";
 import {
   fetchWeeklyCourses,
   type TestKind,
@@ -58,11 +59,33 @@ export async function fetchStudyItems(): Promise<StudyItem[]> {
       },
     }));
 
-  return [...fromCourses, ...personal].filter(({ task }) =>
-    task.kind === "vocab"
-      ? statuses.get(task.id) !== "completed"
-      : task.status !== "completed",
+  const all = [...fromCourses, ...personal];
+
+  // 2차 시험을 마쳤어도 재시험이 남았으면 학습에 계속 보이고 "진행 중"으로 다룬다.
+  // 단어는 서버 상태를 이미 모아 두었고, 어순/순서/문장 배열은 회차 현황으로 확인한다.
+  const resolved = await Promise.all(
+    all.map(async (item): Promise<StudyItem | null> => {
+      const { task } = item;
+      if (task.kind === "vocab") {
+        if (statuses.get(task.id) === "completed") return null;
+        return task.status === "completed"
+          ? { ...item, task: { ...task, status: "in_progress" } }
+          : item;
+      }
+      if (task.status !== "completed") return item;
+      try {
+        const status = await getTestStatus(task.id, task.kind);
+        const pending =
+          status.next_round !== null ||
+          status.rounds.some((round) => round.status === "in_progress");
+        return pending ? { ...item, task: { ...task, status: "in_progress" } } : null;
+      } catch {
+        // 확인하지 못하면 끝난 것으로 보지 않고 목록에 남긴다.
+        return { ...item, task: { ...task, status: "in_progress" } };
+      }
+    }),
   );
+  return resolved.filter((item): item is StudyItem => item !== null);
 }
 
 // 암기할 세트 목록(이미 시험을 마친 세트도 다시 외울 수 있다).
