@@ -93,7 +93,7 @@ export default function StudyScreen() {
               key={kind}
               kind={kind}
               subtitle={
-                pendingOf(kind) > 0 ? `시험 ${pendingOf(kind)}개` : "응시할 시험 없음"
+                pendingOf(kind) > 0 ? `시험 ${pendingOf(kind)}개` : "이번 주 남은 시험은 없어요"
               }
               onPress={() => router.push(`/learn/${kind}`)}
             />
