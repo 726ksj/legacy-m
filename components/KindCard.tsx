@@ -12,7 +12,7 @@ const KIND_ICONS: Record<TestKind, React.ComponentProps<typeof Ionicons>["name"]
   sentence: "reorder-three",
 };
 
-// 학습/학습 결과 허브의 유형 한 칸. 세로로 긴 카드에 아이콘, 이름, 한 줄 설명을 보여 준다.
+// 학습/학습 결과 허브의 유형 한 칸. 세로 목록(1x4)의 한 줄로, 남는 화면 높이를 네 칸이 나눠 가진다.
 export default function KindCard({
   kind,
   subtitle,
@@ -30,22 +30,24 @@ export default function KindCard({
         backgroundColor: palette.bg,
         borderWidth: 1,
         borderColor: palette.border,
-        aspectRatio: 0.78,
+        flex: 1,
+        minHeight: 92,
       }}
-      className="flex-1 justify-between rounded-3xl p-5 active:opacity-80"
+      className="flex-row items-center rounded-3xl px-6 active:opacity-80"
     >
       <View
         style={{ backgroundColor: palette.accent }}
-        className="h-12 w-12 items-center justify-center rounded-2xl"
+        className="h-14 w-14 items-center justify-center rounded-2xl"
       >
-        <Ionicons name={KIND_ICONS[kind]} size={26} color={palette.fg} />
+        <Ionicons name={KIND_ICONS[kind]} size={28} color={palette.fg} />
       </View>
-      <View>
+      <View className="ml-5 flex-1">
         <Text className="text-xl font-extrabold" style={{ color: palette.fg }}>
           {KIND_TITLES[kind]}
         </Text>
         <Text className="mt-1 text-base text-ink-soft">{subtitle}</Text>
       </View>
+      <Ionicons name="chevron-forward" size={22} color={palette.fg} />
     </Pressable>
   );
 }

@@ -15,7 +15,7 @@ import {
 import AnswerActions from "../../components/AnswerActions";
 import ChoiceButton from "../../components/ChoiceButton";
 import ScreenHeader from "../../components/ScreenHeader";
-import { ROUND_TITLE } from "../../lib/test";
+import { roundTitle } from "../../lib/test";
 import { Text } from "../../components/AppText";
 
 const palette = categoryColors.order;
@@ -31,7 +31,7 @@ function Summary({ progress }: { progress: OrderProgress }) {
         style={{ borderRadius: 28, paddingHorizontal: 22, paddingVertical: 24 }}
       >
         <Text className="text-sm font-bold text-cream">
-          {ROUND_TITLE[progress.round_no]} · {progress.title}
+          {roundTitle(progress.round_no)} · {progress.title}
         </Text>
         <Text className="mt-1 text-5xl font-extrabold text-white">
           {progress.score ?? 0}점
@@ -184,7 +184,7 @@ export default function OrderScreen() {
   return (
     <View className="flex-1 bg-blush">
       <ScreenHeader
-        title={progress ? ROUND_TITLE[progress.round_no] : "순서 배열"}
+        title={progress ? roundTitle(progress.round_no) : "순서 배열"}
         back
         right={
           progress && !showSummary ? (

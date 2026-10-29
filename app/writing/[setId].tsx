@@ -17,7 +17,7 @@ import {
   type WritingSentence,
   type WritingSubmitResult,
 } from "../../lib/writing";
-import { ROUND_TITLE } from "../../lib/test";
+import { roundTitle } from "../../lib/test";
 import ScreenHeader from "../../components/ScreenHeader";
 
 type Mode = "arrange" | "result" | "summary";
@@ -212,7 +212,7 @@ export default function WritingStudyScreen() {
     <View className="flex-1 bg-blush">
       <ScreenHeader
         title={
-          progress && mode !== "result" ? ROUND_TITLE[progress.round_no] : HEADER_TITLE[mode]
+          progress && mode !== "result" ? roundTitle(progress.round_no) : HEADER_TITLE[mode]
         }
         back
         right={
@@ -428,7 +428,7 @@ export default function WritingStudyScreen() {
                 }}
               >
                 <Text className="text-sm font-bold text-cream">
-                  {ROUND_TITLE[progress.round_no]} · {progress.title}
+                  {roundTitle(progress.round_no)} · {progress.title}
                 </Text>
                 <Text className="mt-1 text-5xl font-extrabold text-white">
                   {progress.score ?? 0}점

@@ -12,10 +12,12 @@ import {
   friendlyTestError,
   getTestStatus,
   retestDescription,
-  ROUND_TITLE,
+  roundTitle,
   startAttempt,
+  startReview,
   startLabel,
   type TestRound,
+  type ReviewInfo,
   type TestStatus,
 } from "../../lib/test";
 
@@ -91,7 +93,7 @@ function RoundCard({
           )}
         </View>
         <Text className="mt-2 text-2xl font-extrabold text-ink">
-          {ROUND_TITLE[roundNo]}
+          {roundTitle(roundNo)}
         </Text>
         {(round?.status === "in_progress" || retestDescription(roundNo, kind)) && (
           <Text className="mt-1 text-sm text-ink-soft">
@@ -126,7 +128,7 @@ function RoundCard({
       <View className="flex-1 pr-3">
         <View className="flex-row items-center gap-2">
           <Text className="text-lg font-bold text-ink">
-            {ROUND_TITLE[roundNo]}
+            {roundTitle(roundNo)}
           </Text>
           {timing && (
             <View
@@ -159,6 +161,51 @@ function RoundCard({
         )}
       </View>
     </Pressable>
+  );
+}
+
+// 복습 카드: 시험(2~5회)을 모두 마친 뒤 점수에 반영되지 않는 다시 풀기를 시작한다.
+function ReviewCard({
+  review,
+  starting,
+  onStart,
+}: {
+  review: ReviewInfo;
+  starting: boolean;
+  onStart: () => void;
+}) {
+  return (
+    <View className="rounded-3xl border border-line bg-white px-5 py-5">
+      <View className="flex-row items-center gap-2">
+        <Ionicons name="refresh-circle" size={22} color={colors.brand} />
+        <Text className="text-xl font-extrabold text-ink">복습</Text>
+        <View className="rounded-full bg-blush px-2.5 py-0.5">
+          <Text className="text-xs font-bold text-ink-soft">점수 미반영</Text>
+        </View>
+      </View>
+      <Text className="mt-2 text-sm text-ink-soft">
+        시험을 모두 마쳤어요. 시험처럼 랜덤으로 출제되고 점수에는 반영되지 않아요.
+      </Text>
+      {review.count > 0 && review.last_score !== null && (
+        <Text className="mt-1 text-sm font-semibold text-ink-soft">
+          최근 복습 {Math.round(review.last_score)}점 · 지금까지 {review.count}회
+        </Text>
+      )}
+      <Pressable
+        onPress={onStart}
+        disabled={starting}
+        style={({ pressed }) => ({ opacity: pressed || starting ? 0.8 : 1 })}
+        className="mt-4 items-center rounded-2xl border-2 border-brand bg-white py-3.5"
+      >
+        {starting ? (
+          <ActivityIndicator color={colors.brand} />
+        ) : (
+          <Text className="text-lg font-bold text-brand-dark">
+            {review.in_progress ? "복습 이어서 풀기" : "복습 시작"}
+          </Text>
+        )}
+      </Pressable>
+    </View>
   );
 }
 
@@ -250,8 +297,27 @@ export default function TestOverviewScreen() {
     }
   };
 
+  const onReview = async () => {
+    const review = status?.review;
+    if (!review?.available) return;
+    if (kind !== "vocab") {
+      if (review.round_no) router.push(roundRoute(kind, setId, review.round_no));
+      return;
+    }
+    setStarting(true);
+    setError(null);
+    try {
+      const attemptId = review.attempt_id ?? (await startReview(setId));
+      router.push(`/attempt/${attemptId}`);
+    } catch (e) {
+      setError(friendlyTestError(e));
+    } finally {
+      setStarting(false);
+    }
+  };
+
   const primaryLabel = inProgress
-    ? `${ROUND_TITLE[inProgress.round_no]} 이어서 풀기`
+    ? `${roundTitle(inProgress.round_no)} 이어서 풀기`
     : status?.next_round
       ? status.rounds.length === 0
         ? "테스트 시작"
@@ -300,7 +366,7 @@ export default function TestOverviewScreen() {
                 기한 초과
               </Text>
               <Text className="mt-0.5 text-sm text-red-600">
-                {pendingExams.map((n) => ROUND_TITLE[n]).join("·")} 기한(주차
+                {pendingExams.map((n) => roundTitle(n)).join("·")} 기한(주차
                 종료 후 5일)이 지났어요. 응시할 수 있지만 기한 초과로 표시되고
                 점수는 반영돼요.
               </Text>
@@ -312,7 +378,7 @@ export default function TestOverviewScreen() {
                 지각 응시 안내
               </Text>
               <Text className="mt-0.5 text-sm text-amber-700">
-                {pendingExams.map((n) => ROUND_TITLE[n]).join("·")}을(를) 기한
+                {pendingExams.map((n) => roundTitle(n)).join("·")}을(를) 기한
                 안에 응시하지 못했어요. 지금 응시하면 지각으로 표시되고 점수는
                 반영돼요.
               </Text>
@@ -368,6 +434,10 @@ export default function TestOverviewScreen() {
                     />
                   ))}
               </View>
+
+              {status.review?.available && (
+                <ReviewCard review={status.review} starting={starting} onStart={onReview} />
+              )}
             </>
           )}
         </ScrollView>

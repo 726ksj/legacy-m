@@ -122,7 +122,8 @@ export default function ResultsScreen() {
     <View className="flex-1 bg-blush">
       <ScreenHeader title="학습 결과" />
       <ScrollView
-        contentContainerClassName="px-6 pb-10"
+        contentContainerClassName="px-6 pb-6"
+        contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -186,29 +187,26 @@ export default function ResultsScreen() {
               </ScrollView>
             </View>
 
-            <View className="mt-4 gap-4">
-              {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
-                <View key={row[0]} className="flex-row gap-4">
-                  {row.map((kind) => {
-                    // 결과는 응시한 시험만 센다(아직 안 본 시험은 학습 화면에서 본다).
-                    const count = tests.filter(
-                      (t) => t.kind === kind && t.status !== "not_started",
-                    ).length;
-                    return (
-                      <KindCard
-                        key={kind}
-                        kind={kind}
-                        subtitle={count > 0 ? `시험 ${count}개` : "응시한 시험 없음"}
-                        onPress={() =>
-                          router.push(
-                            `/week-results/${kind}?course=${encodeURIComponent(course.key)}&week=${selectedWeek}` as never,
-                          )
-                        }
-                      />
-                    );
-                  })}
-                </View>
-              ))}
+            {/* 네 유형을 세로로 놓고, 남는 화면 높이를 똑같이 나눈다. */}
+            <View className="mt-4 flex-1 gap-4">
+              {KINDS.map((kind) => {
+                // 결과는 응시한 시험만 센다(아직 안 본 시험은 학습 화면에서 본다).
+                const count = tests.filter(
+                  (t) => t.kind === kind && t.status !== "not_started",
+                ).length;
+                return (
+                  <KindCard
+                    key={kind}
+                    kind={kind}
+                    subtitle={count > 0 ? `시험 ${count}개` : "응시한 시험 없음"}
+                    onPress={() =>
+                      router.push(
+                        `/week-results/${kind}?course=${encodeURIComponent(course.key)}&week=${selectedWeek}` as never,
+                      )
+                    }
+                  />
+                );
+              })}
             </View>
           </>
         )}

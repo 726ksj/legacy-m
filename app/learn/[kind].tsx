@@ -212,7 +212,8 @@ function EntryCard({ entry, kind }: { entry: Entry; kind: keyof typeof categoryC
       : task?.status === "in_progress"
         ? { label: "진행 중", fg: palette.fg, bg: palette.accent }
         : undefined;
-  const testLabel = !task ? "시험 완료" : task.status === "in_progress" ? "이어서 하기" : "시험 보기";
+  // 시험을 모두 마친 세트(task 없음)는 복습으로 들어간다(점수에 반영되지 않는 다시 풀기).
+  const testLabel = !task ? "복습하기" : task.status === "in_progress" ? "이어서 하기" : "시험 보기";
 
   return (
     <View className="rounded-3xl border border-line bg-white p-4">
@@ -249,19 +250,22 @@ function EntryCard({ entry, kind }: { entry: Entry; kind: keyof typeof categoryC
           </Pressable>
         )}
         <Pressable
-          disabled={!task}
-          onPress={() => task && router.push(testRoute(task.kind, task.id))}
+          onPress={() => router.push(testRoute(kind, task?.id ?? entry.id))}
           className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3.5 active:opacity-80"
-          style={{ backgroundColor: task ? palette.fg : "#ece6e9" }}
+          style={
+            task
+              ? { backgroundColor: palette.fg }
+              : { backgroundColor: "#ffffff", borderWidth: 1, borderColor: palette.border }
+          }
         >
           <Ionicons
-            name={task ? "create-outline" : "checkmark-circle"}
+            name={task ? "create-outline" : "refresh"}
             size={18}
-            color={task ? "#ffffff" : colors.inkMuted}
+            color={task ? "#ffffff" : palette.fg}
           />
           <Text
             className="text-base font-bold"
-            style={{ color: task ? "#ffffff" : colors.inkMuted }}
+            style={{ color: task ? "#ffffff" : palette.fg }}
           >
             {testLabel}
           </Text>

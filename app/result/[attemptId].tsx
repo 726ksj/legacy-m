@@ -7,7 +7,7 @@ import { supabase } from "../../lib/supabase";
 import { brandGradient, colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 import AttemptReview from "../../components/AttemptReview";
-import { friendlyTestError, getAttempt, ROUND_TITLE, type Attempt } from "../../lib/test";
+import { friendlyTestError, getAttempt, roundTitle, type Attempt } from "../../lib/test";
 
 // 응시를 마친 회차의 결과: 점수와 어떤 문제를 틀렸는지 다시 본다.
 export default function AttemptReviewScreen() {
@@ -41,7 +41,7 @@ export default function AttemptReviewScreen() {
   return (
     <View className="flex-1 bg-blush">
       <ScreenHeader
-        title={attempt ? ROUND_TITLE[attempt.round_no] : "시험 결과"}
+        title={attempt ? roundTitle(attempt.round_no) : "시험 결과"}
         back
       />
 

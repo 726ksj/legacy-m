@@ -14,7 +14,7 @@ import {
   friendlyTestError,
   getAttempt,
   getTestStatus,
-  ROUND_TITLE,
+  roundTitle,
   startAttempt,
   startLabel,
   type Attempt,
@@ -62,7 +62,7 @@ function ResultView({ attempt }: { attempt: Attempt }) {
         style={{ borderRadius: 28, paddingHorizontal: 22, paddingVertical: 24 }}
       >
         <Text className="text-sm font-bold text-cream">
-          {ROUND_TITLE[attempt.round_no]}
+          {roundTitle(attempt.round_no)}
         </Text>
         <Text className="mt-1 text-6xl font-extrabold text-white">
           {attempt.score}점
@@ -187,7 +187,7 @@ export default function AttemptScreen() {
     setPosition(firstUnanswered(attempt));
   };
 
-  const title = attempt ? ROUND_TITLE[attempt.round_no] : "단어 테스트";
+  const title = attempt ? roundTitle(attempt.round_no) : "단어 테스트";
 
   return (
     <View className="flex-1 bg-blush">

@@ -15,8 +15,22 @@ export interface TestRound {
   is_overdue: boolean;
 }
 
+// 복습: 시험(2~5회)을 모두 끝낸 뒤에만 available. 점수와 성적에 반영되지 않는다.
+export interface ReviewInfo {
+  available: boolean;
+  // 어순/순서/문장 배열: 지금 시작하거나 이어서 풀 복습 회차 번호(6 이상).
+  round_no?: number | null;
+  // 단어: 풀던 복습의 attempt id.
+  attempt_id?: string | null;
+  in_progress: boolean;
+  // 끝낸 복습 횟수와 가장 최근 복습 점수.
+  count: number;
+  last_score: number | null;
+}
+
 export interface TestStatus {
   rounds: TestRound[];
+  review?: ReviewInfo;
   next_round: number | null;
   first_score: number | null;
   final_score: number | null;
@@ -66,6 +80,9 @@ export const ROUND_TITLE: Record<number, string> = {
   5: "3차 재시험",
 };
 
+// 회차 이름. 6 이상은 복습(점수에 반영되지 않는 다시 풀기)이다.
+export const roundTitle = (roundNo: number) => ROUND_TITLE[roundNo] ?? "복습";
+
 // 재시험(틀린 것만 다시 푸는 시험) 안내 문구. 단어는 "단어", 나머지 유형은 "문제".
 export function retestDescription(roundNo: number, kind: TestKind = "vocab"): string | undefined {
   const noun = kind === "vocab" ? "단어" : "문제";
@@ -106,6 +123,10 @@ export const getTestStatus = (setId: string, kind: TestKind = "vocab") =>
 
 export const startAttempt = (vocabSetId: string) =>
   rpc<string>("start_vocab_attempt", { p_vocab_set_id: vocabSetId });
+
+// 단어 복습 시작(풀던 복습이 있으면 그 attempt id).
+export const startReview = (vocabSetId: string) =>
+  rpc<string>("start_vocab_review", { p_vocab_set_id: vocabSetId });
 
 export const getAttempt = (attemptId: string) =>
   rpc<Attempt>("get_vocab_attempt", { p_attempt_id: attemptId });

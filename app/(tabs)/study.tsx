@@ -63,7 +63,8 @@ export default function StudyScreen() {
     <View className="flex-1 bg-blush">
       <ScreenHeader title="학습" />
       <ScrollView
-        contentContainerClassName="px-6 pb-10"
+        contentContainerClassName="px-6 pb-6"
+        contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -85,20 +86,17 @@ export default function StudyScreen() {
           <Text className="text-base text-ink-soft">학습할 유형을 선택하세요.</Text>
         </View>
 
-        <View className="mt-4 gap-4">
-          {[KINDS.slice(0, 2), KINDS.slice(2, 4)].map((row) => (
-            <View key={row[0]} className="flex-row gap-4">
-              {row.map((kind) => (
-                <KindCard
-                  key={kind}
-                  kind={kind}
-                  subtitle={
-                    pendingOf(kind) > 0 ? `시험 ${pendingOf(kind)}개` : "응시할 시험 없음"
-                  }
-                  onPress={() => router.push(`/learn/${kind}`)}
-                />
-              ))}
-            </View>
+        {/* 네 유형을 세로로 놓고, 남는 화면 높이를 똑같이 나눈다. */}
+        <View className="mt-4 flex-1 gap-4">
+          {KINDS.map((kind) => (
+            <KindCard
+              key={kind}
+              kind={kind}
+              subtitle={
+                pendingOf(kind) > 0 ? `시험 ${pendingOf(kind)}개` : "응시할 시험 없음"
+              }
+              onPress={() => router.push(`/learn/${kind}`)}
+            />
           ))}
         </View>
       </ScrollView>
