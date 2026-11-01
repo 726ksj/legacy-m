@@ -14,10 +14,11 @@ import type { TestKind } from "../lib/weekly";
 const BOX_PAD_Y = 14; // 칸 안쪽 위아래 여백(py-3.5)
 const LABEL_H = 24; // 칸 이름 줄 높이
 const MIN_BOX = 84; // 칸이 이보다 작아지지 않게 한다
-const MIN_FONT = 13; // 글자를 줄여도 이 크기까지만 줄인다
-const GAP = 12;
+const MIN_FONT = 14; // 글자를 줄여도 이 크기까지만 줄인다
+const GAP = 10;
 const BADGE_H = 28;
-const CARD_PAD_Y = 16;
+const CARD_PAD_Y = 12;
+const CARD_PAD_X = 14;
 
 // 카드 안의 남는 높이를 칸마다 나눈다. 세트 전체에서 가장 긴 글(weights)에 비례해 나누므로
 // 같은 세트의 모든 카드에서 칸 크기가 같고, 글이 긴 칸이 더 큰 몫을 받는다.
@@ -41,7 +42,7 @@ function splitHeights(areaH: number, weights: number[]): number[] {
 }
 
 // 한 칸: 정해진 높이 안에 글을 넣는다. 넘치면 글자를 한 단계씩 줄여 맞추고(최소 MIN_FONT),
-// 그래도 넘치면 칸 안에서 스크롤하며 아래에 "더 있음" 표시를 보여 준다.
+// 그래도 넘치면 칸 안에서 스크롤한다.
 function FitBlock({
   block,
   height,
@@ -51,15 +52,13 @@ function FitBlock({
   height: number;
   fg: string;
 }) {
-  const base = block.emphasis ? 20 : 18;
+  const base = block.emphasis ? 22 : 20;
   const [size, setSize] = useState(base);
-  const [overflow, setOverflow] = useState(false);
   const room = Math.max(0, height - BOX_PAD_Y * 2 - LABEL_H);
 
   // 칸 높이가 바뀌면(화면 회전·크기 변경) 처음 크기에서 다시 맞춘다.
   useEffect(() => {
     setSize(base);
-    setOverflow(false);
   }, [height, base]);
 
   return (
@@ -75,12 +74,8 @@ function FitBlock({
         showsVerticalScrollIndicator={false}
         style={{ height: room, marginTop: 4 }}
         onContentSizeChange={(_, contentH) => {
-          if (contentH > room + 1) {
-            if (size > MIN_FONT) setSize(size - 1);
-            else setOverflow(true);
-          } else {
-            setOverflow(false);
-          }
+          // 넘치면 글자를 한 단계 줄인다. 최소 크기에서도 넘치면 칸 안에서 스크롤한다.
+          if (contentH > room + 1 && size > MIN_FONT) setSize(size - 1);
         }}
       >
         <Text
@@ -90,11 +85,6 @@ function FitBlock({
           {block.text}
         </Text>
       </ScrollView>
-      {overflow && (
-        <View pointerEvents="none" className="absolute bottom-1.5 right-3">
-          <Ionicons name="chevron-down-circle" size={20} color={fg} />
-        </View>
-      )}
     </View>
   );
 }
@@ -178,7 +168,7 @@ export default function TextMemorize({
           </Text>
         </View>
       ) : (
-        <View className="flex-1 gap-4 px-6 pb-6 pt-5">
+        <View className="flex-1 gap-4 px-5 pb-5 pt-4">
           <Text className="text-base font-bold text-ink-soft" numberOfLines={1}>
             {data?.title}
           </Text>
@@ -206,7 +196,7 @@ export default function TextMemorize({
             <ScrollView
               contentContainerStyle={{
                 gap: GAP,
-                paddingHorizontal: 20,
+                paddingHorizontal: CARD_PAD_X,
                 paddingVertical: CARD_PAD_Y,
               }}
             >
