@@ -19,7 +19,6 @@ export interface WeekTest {
   status: SetStatus;
   // 완료한 시험의 점수/세부/날짜. 아직 끝내지 않았으면 null.
   scoreLabel: string | null;
-  detail: string | null;
   date: string | null;
   timings: TimingTag[];
 }
@@ -130,7 +129,6 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
           ? "in_progress"
           : "not_started",
       scoreLabel: result ? `${result.score}점` : null,
-      detail: result ? `${result.correct}/${result.total}개 정답` : null,
       date: result?.at ?? null,
       timings: vocabTimings.get(set.id) ?? [],
     };
@@ -149,10 +147,6 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
           ? "in_progress"
           : "not_started",
       scoreLabel: row.completed ? `${row.score}점` : null,
-      // 종합 점수 옆에 1차·2차 시험 점수를 같이 보여 준다.
-      detail: row.completed
-        ? `1차 ${row.first_score ?? 0}점 · 2차 ${row.final_score ?? 0}점`
-        : null,
       date: row.completed_at,
       timings: kind ? [{ label: TIMING_LABEL[kind], kind }] : [],
     };

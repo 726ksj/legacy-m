@@ -54,10 +54,9 @@ export default function TestResultCard({ test }: { test: WeekTest }) {
         )}
       </View>
       <View className="mt-1.5 flex-row flex-wrap items-center gap-2">
-        {done && test.detail && test.date && (
-          <Text className="text-sm text-ink-soft">
-            {test.detail} · {formatDate(test.date)}
-          </Text>
+        {/* 최종 시험을 마친 날짜만 보여 준다. */}
+        {done && test.date && (
+          <Text className="text-sm text-ink-soft">{formatDate(test.date)}</Text>
         )}
         {!done && (
           <Text className="text-sm text-ink-soft">
