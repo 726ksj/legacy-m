@@ -18,12 +18,9 @@ import EmptyState from "../../components/EmptyState";
 import ScreenHeader from "../../components/ScreenHeader";
 
 type Tab = "active" | "graduated";
-type Sort = "count" | "recent";
 
-const SORT_LABEL: Record<Sort, string> = {
-  count: "많이 틀린 순",
-  recent: "최근 순",
-};
+// 주차가 지정되지 않은 단어장의 오답을 모아 보는 값.
+const NO_WEEK = 0;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -121,8 +118,7 @@ export default function WrongAnswersScreen() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("active");
-  const [sort, setSort] = useState<Sort>("count");
-  // 기본은 이번 주차의 오답. null이면 전체 주차.
+  // 보고 있는 주차(기본은 이번 주차). NO_WEEK(0)은 주차 미지정.
   const [week, setWeek] = useState<number | null>(null);
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
   const weekInitialized = useRef(false);
@@ -145,9 +141,11 @@ export default function WrongAnswersScreen() {
       const now = currentWeekOf(courses);
       setCurrentWeek(now);
       // 처음 열 때만 이번 주차를 기본으로 고른다(이후엔 사용자가 고른 칩을 유지).
+      // 이번 주차를 모르면 오답이 있는 가장 최근 주차, 오답이 없으면 1주차.
       if (!weekInitialized.current) {
         weekInitialized.current = true;
-        if (now !== null) setWeek(now);
+        const latest = Math.max(0, ...loaded.map((n) => n.week ?? 0));
+        setWeek(now ?? (latest > 0 ? latest : 1));
       }
     } catch (e) {
       setError(friendlyReviewError(e));
@@ -175,29 +173,35 @@ export default function WrongAnswersScreen() {
   const graduationPct =
     notes.length === 0 ? 0 : Math.round((graduated.length / notes.length) * 100);
 
-  // 오답이 있는 주차 + 이번 주차(오답이 없어도 칩으로 보여 준다).
+  // 학습 결과처럼 1주차부터 가장 늦은 주차까지 칩을 보여 준다(오답이 없는 주차도 포함).
   const weeks = useMemo(() => {
-    const set = new Set(notes.map((n) => n.week).filter((w): w is number => w !== null));
-    if (currentWeek !== null) set.add(currentWeek);
-    return [...set].sort((a, b) => a - b);
+    const last = Math.max(currentWeek ?? 0, ...notes.map((n) => n.week ?? 0));
+    return Array.from({ length: last }, (_, i) => i + 1);
   }, [notes, currentWeek]);
+  const hasNoWeek = notes.some((n) => n.week === null);
+  const selectedWeek = week ?? currentWeek ?? 1;
 
   const visible = useMemo(() => {
     const source = (tab === "active" ? active : graduated).filter(
-      (n) => week === null || n.week === week,
+      (n) => (n.week ?? NO_WEEK) === selectedWeek,
     );
     const sorted = [...source];
     if (tab === "graduated") {
       sorted.sort((a, b) => (b.graduated_at ?? "").localeCompare(a.graduated_at ?? ""));
-    } else if (sort === "count") {
-      sorted.sort((a, b) => b.wrong_count - a.wrong_count || b.last_wrong_at.localeCompare(a.last_wrong_at));
     } else {
-      sorted.sort((a, b) => b.last_wrong_at.localeCompare(a.last_wrong_at));
+      // 많이 틀린 단어가 위로, 같으면 최근에 틀린 단어가 위로.
+      sorted.sort(
+        (a, b) => b.wrong_count - a.wrong_count || b.last_wrong_at.localeCompare(a.last_wrong_at),
+      );
     }
     return sorted;
-  }, [tab, sort, week, active, graduated]);
+  }, [tab, selectedWeek, active, graduated]);
 
-  const solvable = tab === "active" ? Math.min(visible.length, MAX_REVIEW_QUESTIONS) : 0;
+  // 주차 미지정 오답은 서버가 주차로 걸러 주지 못해서, 이 화면에서는 다시 풀기를 열지 않는다.
+  const solvable =
+    tab === "active" && selectedWeek !== NO_WEEK
+      ? Math.min(visible.length, MAX_REVIEW_QUESTIONS)
+      : 0;
 
   // 테스트(단어장)별로 묶어서 보여 준다. 처음 나온 순서(정렬 결과)를 유지한다.
   const sections = useMemo(() => {
@@ -214,17 +218,11 @@ export default function WrongAnswersScreen() {
     return [...map.entries()];
   }, [visible]);
 
-  // 이번 주차만 보고 있을 때, 다른 주차에 남아 있는 오답(복습을 놓치기 쉬운 것).
-  const otherWeekActive =
-    tab === "active" && week !== null
-      ? active.filter((n) => n.week !== week).length
-      : 0;
-
   const startReview = async () => {
     setStarting(true);
     setError(null);
     try {
-      const sessionId = await startReviewSession(week);
+      const sessionId = await startReviewSession(selectedWeek);
       router.push(`/review/${sessionId}`);
     } catch (e) {
       setError(friendlyReviewError(e));
@@ -273,6 +271,10 @@ export default function WrongAnswersScreen() {
                 <Text className="text-base font-bold text-ink">마스터 현황</Text>
                 <Text className="text-base font-extrabold text-berry">{graduationPct}%</Text>
               </View>
+              <Text className="mt-1 text-sm leading-5 text-ink-soft">
+                마스터란, 틀린 단어를 서로 다른 날 연속 2번 맞혀서 오답노트에서 졸업하는 거예요.
+                마스터한 단어도 다시 틀리면 오답으로 돌아와요.
+              </Text>
               <View className="mt-3 h-2.5 w-full rounded-full bg-blush">
                 <View className="h-2.5 rounded-full bg-brand" style={{ width: `${graduationPct}%` }} />
               </View>
@@ -306,43 +308,26 @@ export default function WrongAnswersScreen() {
               ))}
             </View>
 
-            {tab === "active" && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4">
-                <View className="flex-row gap-2">
-                  {(Object.keys(SORT_LABEL) as Sort[]).map((key) => (
-                    <Chip key={key} label={SORT_LABEL[key]} selected={sort === key} onPress={() => setSort(key)} />
-                  ))}
-                </View>
-              </ScrollView>
-            )}
-
-            {weeks.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3">
-                <View className="flex-row gap-2">
-                  <Chip label="전체" selected={week === null} onPress={() => setWeek(null)} />
-                  {weeks.map((w) => (
-                    <Chip
-                      key={w}
-                      label={w === currentWeek ? `${w}주차 · 이번 주` : `${w}주차`}
-                      selected={week === w}
-                      onPress={() => setWeek(w)}
-                    />
-                  ))}
-                </View>
-              </ScrollView>
-            )}
-
-            {otherWeekActive > 0 && (
-              <Pressable
-                onPress={() => setWeek(null)}
-                className="mt-4 flex-row items-center justify-between rounded-2xl bg-amber-50 px-4 py-3"
-              >
-                <Text className="flex-1 text-sm font-bold text-amber-700">
-                  다른 주차에 마스터하지 못한 단어 {otherWeekActive}개가 남아 있어요
-                </Text>
-                <Text className="text-sm font-bold text-amber-700">전체 보기 ›</Text>
-              </Pressable>
-            )}
+            {/* 학습 결과처럼 주차 칩만 둔다. 이번 주차가 처음에 선택돼 있다. */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4">
+              <View className="flex-row gap-2">
+                {weeks.map((w) => (
+                  <Chip
+                    key={w}
+                    label={`${w}주차`}
+                    selected={selectedWeek === w}
+                    onPress={() => setWeek(w)}
+                  />
+                ))}
+                {hasNoWeek && (
+                  <Chip
+                    label="주차 미지정"
+                    selected={selectedWeek === NO_WEEK}
+                    onPress={() => setWeek(NO_WEEK)}
+                  />
+                )}
+              </View>
+            </ScrollView>
 
             <View className="mt-4 gap-5">
               {visible.length === 0 ? (
@@ -350,10 +335,8 @@ export default function WrongAnswersScreen() {
                   icon={tab === "active" ? "checkmark-circle-outline" : "school-outline"}
                   title={
                     tab === "active"
-                      ? week !== null
-                        ? "이 주차에는 남은 오답이 없어요"
-                        : "남은 오답이 없어요"
-                      : "아직 마스터한 단어가 없어요"
+                      ? "이 주차에는 남은 오답이 없어요"
+                      : "이 주차에는 마스터한 단어가 없어요"
                   }
                   description={
                     tab === "active"
