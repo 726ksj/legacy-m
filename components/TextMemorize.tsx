@@ -8,7 +8,7 @@ import { supabase } from "../lib/supabase";
 import { categoryColors, colors } from "../lib/theme";
 import { KIND_TITLES } from "../lib/study";
 import { fetchTextMemorize, type TextMemorizeSet } from "../lib/memorize";
-import { finishMemorize } from "../lib/finishMemorize";
+import { useMemorizeFinish } from "./useMemorizeFinish";
 import type { TestKind } from "../lib/weekly";
 
 // 어순 배열·순서 배열·문장 배열 암기: 문제 하나를 카드 한 장에 정답 순서대로 보여 주고
@@ -50,13 +50,12 @@ export default function TextMemorize({
   const card = cards[index];
   const isFirst = index === 0;
   const isLast = index === cards.length - 1;
-  // 마지막 카드에서 완료하면 시험을 볼지 묻고, 아니오면 학습 목록으로 돌아간다.
-  const finish = () => {
-    finishMemorize(kind, setId);
-  };
+  // 마지막 카드에서 완료하면 시험을 볼지 묻는다(예: 시험 화면, 아니오: 학습 목록).
+  const { finish, finishPrompt } = useMemorizeFinish(kind, setId);
 
   return (
     <View className="flex-1 bg-blush">
+      {finishPrompt}
       <ScreenHeader
         title={`${KIND_TITLES[kind]} 암기`}
         back

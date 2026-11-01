@@ -7,7 +7,7 @@ import { supabase } from "../../lib/supabase";
 import { categoryColors, colors } from "../../lib/theme";
 import ScreenHeader from "../../components/ScreenHeader";
 import TextMemorize from "../../components/TextMemorize";
-import { finishMemorize } from "../../lib/finishMemorize";
+import { useMemorizeFinish } from "../../components/useMemorizeFinish";
 import { isTestKind } from "../../lib/study";
 
 interface MemorizeWord {
@@ -68,13 +68,12 @@ function VocabMemorize() {
   const isFirst = index === 0;
   const isLast = index === words.length - 1;
   const move = (next: number) => setIndex(next);
-  // 마지막 단어에서 완료하면 시험을 볼지 묻고, 아니오면 학습 목록으로 돌아간다.
-  const finish = () => {
-    finishMemorize("vocab", setId);
-  };
+  // 마지막 단어에서 완료하면 시험을 볼지 묻는다(예: 시험 화면, 아니오: 학습 목록).
+  const { finish, finishPrompt } = useMemorizeFinish("vocab", setId);
 
   return (
     <View className="flex-1 bg-blush">
+      {finishPrompt}
       <ScreenHeader
         title="단어 암기"
         back
