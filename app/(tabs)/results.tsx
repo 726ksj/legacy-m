@@ -198,7 +198,7 @@ export default function ResultsScreen() {
                   <KindCard
                     key={kind}
                     kind={kind}
-                    subtitle={count > 0 ? `시험 ${count}개` : "응시한 시험 없음"}
+                    subtitle={count > 0 ? `시험 ${count}개` : "시험을 보면 결과가 쌓여요"}
                     onPress={() =>
                       router.push(
                         `/week-results/${kind}?course=${encodeURIComponent(course.key)}&week=${selectedWeek}` as never,
