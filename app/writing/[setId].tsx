@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { Text } from "../../components/AppText";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
@@ -17,7 +17,8 @@ import {
   type WritingSentence,
   type WritingSubmitResult,
 } from "../../lib/writing";
-import { roundTitle } from "../../lib/test";
+import { forfeitRound, roundTitle } from "../../lib/test";
+import { useTestExitGuard } from "../../lib/useTestExitGuard";
 import ScreenHeader from "../../components/ScreenHeader";
 
 type Mode = "arrange" | "result" | "summary";
@@ -208,13 +209,20 @@ export default function WritingStudyScreen() {
 
   const showCounter = mode !== "summary" && sentences.length > 0;
 
+  // 시험 중에는 뒤로가기를 막고, 앱을 나가면 그 상태 그대로 제출한다.
+  const examActive = progress !== null && !progress.completed && mode !== "summary";
+  useTestExitGuard(examActive, () => forfeitRound("writing", setId, progress!.round_no), () => {
+    load().catch(() => {});
+  });
+
   return (
     <View className="flex-1 bg-blush">
+      <Stack.Screen options={{ gestureEnabled: !examActive }} />
       <ScreenHeader
         title={
           progress && mode !== "result" ? roundTitle(progress.round_no) : HEADER_TITLE[mode]
         }
-        back
+        back={!examActive}
         right={
           showCounter ? (
             <View className="min-w-[72px] items-center rounded-full bg-white/25 px-2.5 py-1">

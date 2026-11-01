@@ -128,6 +128,20 @@ export const startAttempt = (vocabSetId: string) =>
 export const startReview = (vocabSetId: string) =>
   rpc<string>("start_vocab_review", { p_vocab_set_id: vocabSetId });
 
+// 시험 도중 이탈하면 푼 데까지 그대로 제출한다(풀지 않은 문제는 오답). 여러 번 불러도 안전하다.
+export const forfeitVocabAttempt = (attemptId: string) =>
+  rpc<{ forfeited: boolean }>("forfeit_vocab_attempt", { p_attempt_id: attemptId });
+
+export const forfeitRound = (
+  kind: Exclude<TestKind, "vocab">,
+  setId: string,
+  round: number,
+) =>
+  rpc<{ forfeited: boolean }>(`forfeit_${kind}_round`, {
+    p_set_id: setId,
+    p_round: round,
+  });
+
 export const getAttempt = (attemptId: string) =>
   rpc<Attempt>("get_vocab_attempt", { p_attempt_id: attemptId });
 

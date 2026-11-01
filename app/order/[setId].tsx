@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../lib/supabase";
 import { brandGradient, categoryColors, colors } from "../../lib/theme";
@@ -15,7 +15,8 @@ import {
 import AnswerActions from "../../components/AnswerActions";
 import ChoiceButton from "../../components/ChoiceButton";
 import ScreenHeader from "../../components/ScreenHeader";
-import { roundTitle } from "../../lib/test";
+import { forfeitRound, roundTitle } from "../../lib/test";
+import { useTestExitGuard } from "../../lib/useTestExitGuard";
 import { Text } from "../../components/AppText";
 
 const palette = categoryColors.order;
@@ -181,11 +182,18 @@ export default function OrderScreen() {
     progress !== null &&
     !progress.questions.some((q, i) => i > position && !q.answered);
 
+  // 시험 중에는 뒤로가기를 막고, 앱을 나가면 그 상태 그대로 제출한다.
+  const examActive = progress !== null && !showSummary && !progress.completed;
+  useTestExitGuard(examActive, () => forfeitRound("order", setId, progress!.round_no), () => {
+    load().catch(() => {});
+  });
+
   return (
     <View className="flex-1 bg-blush">
+      <Stack.Screen options={{ gestureEnabled: !examActive }} />
       <ScreenHeader
         title={progress ? roundTitle(progress.round_no) : "순서 배열"}
-        back
+        back={!examActive}
         right={
           progress && !showSummary ? (
             <View className="rounded-full bg-white/25 px-2.5 py-1">

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { Text } from "../../components/AppText";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../lib/supabase";
 import { brandGradient, colors } from "../../lib/theme";
@@ -9,8 +9,10 @@ import AnswerActions from "../../components/AnswerActions";
 import AttemptReview from "../../components/AttemptReview";
 import ChoiceButton from "../../components/ChoiceButton";
 import ScreenHeader from "../../components/ScreenHeader";
+import { useTestExitGuard } from "../../lib/useTestExitGuard";
 import {
   answerQuestion,
+  forfeitVocabAttempt,
   friendlyTestError,
   getAttempt,
   getTestStatus,
@@ -189,11 +191,18 @@ export default function AttemptScreen() {
 
   const title = attempt ? roundTitle(attempt.round_no) : "단어 테스트";
 
+  // 시험 중에는 뒤로가기를 막고, 앱을 나가면 그 상태 그대로 제출한다.
+  const examActive = attempt !== null && attempt.status === "in_progress" && !showResult;
+  useTestExitGuard(examActive, () => forfeitVocabAttempt(attemptId), () => {
+    load();
+  });
+
   return (
     <View className="flex-1 bg-blush">
+      <Stack.Screen options={{ gestureEnabled: !examActive }} />
       <ScreenHeader
         title={title}
-        back
+        back={!examActive}
         right={
           attempt && !showResult ? (
             <View className="min-w-[72px] items-center rounded-full bg-white/25 px-2.5 py-1">

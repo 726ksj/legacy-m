@@ -13,6 +13,8 @@ import {
   getTestStatus,
   retestDescription,
   roundTitle,
+  forfeitRound,
+  forfeitVocabAttempt,
   startAttempt,
   startReview,
   startLabel,
@@ -94,6 +96,9 @@ function RoundCard({
         </View>
         <Text className="mt-2 text-2xl font-extrabold text-ink">
           {roundTitle(roundNo)}
+        </Text>
+        <Text className="mt-1 text-sm font-semibold text-red-500">
+          시험 중에 앱을 나가면 푼 데까지 그대로 제출돼요
         </Text>
         {(round?.status === "in_progress" || retestDescription(roundNo, kind)) && (
           <Text className="mt-1 text-sm text-ink-soft">
@@ -186,6 +191,9 @@ function ReviewCard({
       <Text className="mt-2 text-sm text-ink-soft">
         시험을 모두 마쳤어요. 시험처럼 랜덤으로 출제되고 점수에는 반영되지 않아요.
       </Text>
+      <Text className="mt-1 text-sm font-semibold text-red-500">
+        복습 중에 앱을 나가면 푼 데까지 그대로 끝나요
+      </Text>
       {review.count > 0 && review.last_score !== null && (
         <Text className="mt-1 text-sm font-semibold text-ink-soft">
           최근 복습 {Math.round(review.last_score)}점 · 지금까지 {review.count}회
@@ -240,6 +248,26 @@ export default function TestOverviewScreen() {
         getTestStatus(setId, kind),
       ]);
       setTitle(set?.title ?? "");
+
+      // 시험 중에는 이 화면으로 돌아올 수 없다. 그런데도 풀던 회차가 남아 있으면 앱이 도중에
+      // 꺼진 것이므로, 푼 데까지 그대로 제출하고 상태를 다시 읽는다.
+      const openRound = nextStatus.rounds.find((round) => round.status === "in_progress");
+      const openReview = nextStatus.review?.in_progress ? nextStatus.review : undefined;
+      if (openRound || openReview) {
+        try {
+          if (kind === "vocab") {
+            const attemptId = openRound?.attempt_id ?? openReview?.attempt_id;
+            if (attemptId) await forfeitVocabAttempt(attemptId);
+          } else {
+            const roundNo = openRound?.round_no ?? openReview?.round_no;
+            if (roundNo) await forfeitRound(kind, setId, roundNo);
+          }
+          setStatus(await getTestStatus(setId, kind));
+          return;
+        } catch {
+          // 제출하지 못해도 화면은 현황을 그대로 보여 준다.
+        }
+      }
       setStatus(nextStatus);
     } catch (e) {
       setError(friendlyTestError(e));
