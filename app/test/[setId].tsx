@@ -98,7 +98,7 @@ function RoundCard({
           {roundTitle(roundNo)}
         </Text>
         <Text className="mt-1 text-sm font-semibold text-red-500">
-          시험 중에 앱을 나가면 푼 데까지 그대로 제출돼요
+          시험 중에 앱을 1분 넘게 나가면 푼 데까지 그대로 제출돼요
         </Text>
         {(round?.status === "in_progress" || retestDescription(roundNo, kind)) && (
           <Text className="mt-1 text-sm text-ink-soft">
@@ -192,7 +192,7 @@ function ReviewCard({
         시험을 모두 마쳤어요. 시험처럼 랜덤으로 출제되고 점수에는 반영되지 않아요.
       </Text>
       <Text className="mt-1 text-sm font-semibold text-red-500">
-        복습 중에 앱을 나가면 푼 데까지 그대로 끝나요
+        복습 중에 앱을 1분 넘게 나가면 푼 데까지 그대로 끝나요
       </Text>
       {review.count > 0 && review.last_score !== null && (
         <Text className="mt-1 text-sm font-semibold text-ink-soft">
