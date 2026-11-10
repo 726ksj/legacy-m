@@ -254,7 +254,7 @@ export default function SentenceScreen() {
           <Text className="text-base font-bold text-ink-soft">
             {attempt.answered
               ? "정답 순서는 아래 번호와 같아요"
-              : "이어지는 순서대로 문장을 눌러 주세요"}
+              : "이어지는 순서대로 눌러 주세요"}
           </Text>
 
           <View className="gap-3">

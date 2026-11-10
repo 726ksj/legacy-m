@@ -141,11 +141,18 @@ export default function WrongAnswersScreen() {
       const now = currentWeekOf(courses);
       setCurrentWeek(now);
       // 처음 열 때만 이번 주차를 기본으로 고른다(이후엔 사용자가 고른 칩을 유지).
-      // 이번 주차를 모르면 오답이 있는 가장 최근 주차, 오답이 없으면 1주차.
+      // 이번 주차에 남은 오답이 없으면 남은 오답이 있는 가장 최근 주차로 시작해서, 빈 화면이 먼저 뜨지 않게 한다.
       if (!weekInitialized.current) {
         weekInitialized.current = true;
-        const latest = Math.max(0, ...loaded.map((n) => n.week ?? 0));
-        setWeek(now ?? (latest > 0 ? latest : 1));
+        const activeWeeks = loaded
+          .filter((n) => n.status === "active" && n.week !== null)
+          .map((n) => n.week as number);
+        const latestActive = activeWeeks.length > 0 ? Math.max(...activeWeeks) : null;
+        setWeek(
+          now !== null && (activeWeeks.includes(now) || latestActive === null)
+            ? now
+            : (latestActive ?? now ?? 1),
+        );
       }
     } catch (e) {
       setError(friendlyReviewError(e));
@@ -250,7 +257,7 @@ export default function WrongAnswersScreen() {
         <EmptyState
           icon="alert-circle-outline"
           title="아직 오답이 없어요"
-          description="단어 테스트에서 틀린 단어가 여기에 모여요"
+          description={"단어 테스트에서 틀린 단어가\n여기에 모여요"}
         />
       ) : (
         <>
@@ -272,8 +279,7 @@ export default function WrongAnswersScreen() {
                 <Text className="text-base font-extrabold text-berry">{graduationPct}%</Text>
               </View>
               <Text className="mt-1 text-sm leading-5 text-ink-soft">
-                마스터란, 틀린 단어를 서로 다른 날 연속 2번 맞혀서 오답노트에서 졸업하는 거예요.
-                마스터한 단어도 다시 틀리면 오답으로 돌아와요.
+                {"다른 날 연속 2번 맞히면 마스터예요.\n다시 틀리면 오답으로 돌아와요."}
               </Text>
               <View className="mt-3 h-2.5 w-full rounded-full bg-blush">
                 <View className="h-2.5 rounded-full bg-brand" style={{ width: `${graduationPct}%` }} />
@@ -335,13 +341,15 @@ export default function WrongAnswersScreen() {
                   icon={tab === "active" ? "checkmark-circle-outline" : "school-outline"}
                   title={
                     tab === "active"
-                      ? "이 주차에는 남은 오답이 없어요"
-                      : "이 주차에는 마스터한 단어가 없어요"
+                      ? "이 주차는 오답이 없어요"
+                      : "마스터한 단어가 없어요"
                   }
                   description={
                     tab === "active"
-                      ? "모든 오답을 마스터했어요. 잘했어요!"
-                      : "서로 다른 날 연속 2번 맞히면 마스터해요"
+                      ? active.length > 0
+                        ? `다른 주차에 남은 오답이\n${active.length}개 있어요`
+                        : "모든 오답을 마스터했어요.\n잘했어요!"
+                      : "서로 다른 날\n연속 2번 맞히면 마스터해요"
                   }
                 />
               ) : (

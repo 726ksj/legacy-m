@@ -37,11 +37,16 @@ export default function ScoreTrendChart({
   const y = (v: number) => PAD_TOP + (1 - v / 100) * PLOT_H;
   const x = (i: number) => slot * (i + 0.5);
 
-  // 선택한 주차가 화면 가운데쯤 오도록 가로 스크롤을 맞춘다(주차가 많을 때만 의미가 있다).
+  // 선택한 주차가 보이도록 가로 스크롤을 맞춘다(주차가 많을 때만 의미가 있다). 주차 칸 경계에
+  // 맞춰서 4주차가 온전히 보이게 하고(양쪽 점이 반쯤 잘리지 않게), 선택한 주차는 그 안의 두 번째 칸이다.
   useEffect(() => {
     if (width === 0 || contentW <= width) return;
-    const target = x(selectedWeek - 1) - width / 2;
-    scrollRef.current?.scrollTo({ x: Math.max(0, target), animated: true });
+    const first = Math.min(Math.max(selectedWeek - 2, 0), n - VISIBLE_WEEKS);
+    // 칸 너비가 막 바뀐 직후에는 스크롤 영역 크기가 아직 갱신되지 않았을 수 있어서 잠시 뒤에 이동한다.
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollTo({ x: first * slot, animated: true });
+    }, 80);
+    return () => clearTimeout(timer);
   }, [selectedWeek, width, contentW]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 점수가 이어지는 구간마다 선과 아래 면을 그린다.

@@ -70,7 +70,7 @@ export default function LoginScreen() {
     });
 
     if (signInError) {
-      setError("아이디 또는 비밀번호가 올바르지 않습니다.");
+      setError("아이디·비밀번호를 확인해 주세요.");
       setLoading(false);
       return;
     }

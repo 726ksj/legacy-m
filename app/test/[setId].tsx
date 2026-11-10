@@ -98,7 +98,7 @@ function RoundCard({
           {roundTitle(roundNo)}
         </Text>
         <Text className="mt-1 text-sm font-semibold text-red-500">
-          시험 중에 앱을 1분 넘게 나가면 푼 데까지 그대로 제출돼요
+          {"시험 중 앱을 1분 넘게 나가면\n푼 데까지 그대로 제출돼요"}
         </Text>
         {(round?.status === "in_progress" || retestDescription(roundNo, kind)) && (
           <Text className="mt-1 text-sm text-ink-soft">
@@ -189,10 +189,10 @@ function ReviewCard({
         </View>
       </View>
       <Text className="mt-2 text-sm text-ink-soft">
-        시험을 모두 마쳤어요. 시험처럼 랜덤으로 출제되고 점수에는 반영되지 않아요.
+        {"시험을 모두 마쳤어요.\n랜덤 출제 · 점수에는 반영 안 돼요"}
       </Text>
       <Text className="mt-1 text-sm font-semibold text-red-500">
-        복습 중에 앱을 1분 넘게 나가면 푼 데까지 그대로 끝나요
+        {"복습 중 앱을 1분 넘게 나가면\n푼 데까지 그대로 끝나요"}
       </Text>
       {review.count > 0 && review.last_score !== null && (
         <Text className="mt-1 text-sm font-semibold text-ink-soft">
@@ -394,9 +394,7 @@ export default function TestOverviewScreen() {
                 기한 초과
               </Text>
               <Text className="mt-0.5 text-sm text-red-600">
-                {pendingExams.map((n) => roundTitle(n)).join("·")} 기한(주차
-                종료 후 5일)이 지났어요. 응시할 수 있지만 기한 초과로 표시되고
-                점수는 반영돼요.
+                {`${pendingExams.map((n) => roundTitle(n)).join("·")} 기한이 지났어요.\n응시는 가능하고 점수는 반영돼요.`}
               </Text>
             </View>
           )}
@@ -406,9 +404,7 @@ export default function TestOverviewScreen() {
                 지각 응시 안내
               </Text>
               <Text className="mt-0.5 text-sm text-amber-700">
-                {pendingExams.map((n) => roundTitle(n)).join("·")}을(를) 기한
-                안에 응시하지 못했어요. 지금 응시하면 지각으로 표시되고 점수는
-                반영돼요.
+                {`${pendingExams.map((n) => roundTitle(n)).join("·")} 기한을 넘겼어요.\n지금 보면 지각 표시, 점수는 반영돼요.`}
               </Text>
             </View>
           )}

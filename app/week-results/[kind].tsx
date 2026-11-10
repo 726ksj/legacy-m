@@ -107,7 +107,7 @@ export default function ResultsKindScreen() {
             <Text className="px-2 text-base font-bold text-ink">주차별 성적 흐름</Text>
             {scoredCount === 0 ? (
               <Text className="px-2 pb-3 pt-2 text-sm text-ink-soft">
-                시험을 끝내면 주차별 점수가 그래프로 쌓여요
+                시험을 끝내면 점수가 그래프로 쌓여요
               </Text>
             ) : (
               <>
@@ -145,7 +145,7 @@ export default function ResultsKindScreen() {
             <EmptyState
               icon="document-text-outline"
               title="응시한 시험이 없어요"
-              description="시험을 보면 결과가 여기에 쌓여요"
+              description="시험을 보면 결과가 쌓여요"
             />
           ) : (
             <View className="mt-3 gap-3">

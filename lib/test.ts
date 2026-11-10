@@ -89,7 +89,7 @@ export function retestDescription(roundNo: number, kind: TestKind = "vocab"): st
   const text: Record<number, string> = {
     2: `1차 시험에서 틀린 ${noun}만 다시 풀어요`,
     4: `2차 시험에서 틀린 ${noun}만 다시 풀어요`,
-    5: `1차·2차 시험에서 모두 틀린 ${noun}만 마지막으로 다시 풀어요`,
+    5: `1차·2차 시험에서 모두 틀린 ${noun}만\n마지막으로 다시 풀어요`,
   };
   return text[roundNo];
 }
@@ -160,7 +160,7 @@ export const answerQuestion = (
 export function friendlyTestError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("at least 4 distinct meanings")) {
-    return "이 단어장은 서로 다른 뜻의 단어가 4개 이상 있어야 테스트할 수 있어요.";
+    return "이 단어장은 서로 다른 뜻의 단어가\n4개 이상 있어야 테스트할 수 있어요.";
   }
   if (message.includes("no further round")) {
     return "이미 모든 회차를 마쳤어요.";
@@ -168,5 +168,5 @@ export function friendlyTestError(error: unknown): string {
   if (message.includes("not assigned")) {
     return "이 단어장은 지금 볼 수 없어요.";
   }
-  return "테스트를 불러오지 못했어요. 잠시 후 다시 시도해주세요.";
+  return "테스트를 불러오지 못했어요.\n잠시 후 다시 시도해 주세요.";
 }

@@ -259,7 +259,7 @@ export default function WritingStudyScreen() {
                 지각 응시
               </Text>
               <Text className="mt-0.5 text-sm text-amber-700">
-                주차가 끝난 지 5일 이내예요. 점수는 반영되고 지각으로 표시돼요.
+                {"주차가 끝난 지 5일 이내예요.\n점수는 반영되고 지각으로 표시돼요."}
               </Text>
             </View>
           )}
@@ -269,8 +269,7 @@ export default function WritingStudyScreen() {
                 기한 초과
               </Text>
               <Text className="mt-0.5 text-sm text-red-600">
-                주차가 끝난 지 5일이 지났어요. 응시할 수 있지만 기한 초과로
-                표시돼요.
+                {"주차가 끝난 지 5일이 지났어요.\n응시는 가능하고 기한 초과로 표시돼요."}
               </Text>
             </View>
           )}

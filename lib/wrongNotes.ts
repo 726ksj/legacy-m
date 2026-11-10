@@ -82,5 +82,5 @@ export function friendlyReviewError(error: unknown): string {
   if (message.includes("not enough words")) {
     return "보기를 만들 단어가 부족해요.";
   }
-  return "오답노트를 불러오지 못했어요. 잠시 후 다시 시도해주세요.";
+  return "오답노트를 불러오지 못했어요.\n잠시 후 다시 시도해 주세요.";
 }

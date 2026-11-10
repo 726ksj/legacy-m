@@ -168,7 +168,8 @@ export default function LearnKindScreen() {
           </View>
         )}
 
-        <View className="mt-6 gap-6">          {entries.length === 0 && (
+        <View className="mt-6 gap-6">
+          {entries.length === 0 && (
             <View className="items-center rounded-3xl border border-line bg-white px-6 py-10">
               <Ionicons name="checkmark-circle-outline" size={34} color={colors.inkMuted} />
               <Text className="mt-3 text-lg text-ink-soft">아직 올라온 학습이 없어요</Text>

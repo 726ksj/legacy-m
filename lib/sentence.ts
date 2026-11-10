@@ -112,5 +112,5 @@ export function friendlySentenceError(error: unknown): string {
   if (message.includes("not available")) {
     return "이 문장 배열은 지금 볼 수 없어요.";
   }
-  return "문장 배열을 불러오지 못했어요. 잠시 후 다시 시도해주세요.";
+  return "문장 배열을 불러오지 못했어요.\n잠시 후 다시 시도해 주세요.";
 }

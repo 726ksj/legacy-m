@@ -193,7 +193,7 @@ export function friendlyWritingError(error: unknown): string {
     return "이 어순 배열은 지금 풀 수 없어요.";
   }
   if (message.includes("invalid arrangement")) {
-    return "답안이 올바르지 않아요. 처음부터 다시 만들어 주세요.";
+    return "답안이 올바르지 않아요.\n처음부터 다시 만들어 주세요.";
   }
-  return "어순 배열을 불러오지 못했어요. 잠시 후 다시 시도해주세요.";
+  return "어순 배열을 불러오지 못했어요.\n잠시 후 다시 시도해 주세요.";
 }

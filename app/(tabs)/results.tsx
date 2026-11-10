@@ -101,7 +101,7 @@ export default function ResultsScreen() {
           <EmptyState
             icon="stats-chart-outline"
             title="아직 학습 기록이 없어요"
-            description="수강 중인 강좌의 주차별 결과가 여기에 쌓여요"
+            description={"수강 중인 강좌의\n주차별 결과가 여기에 쌓여요"}
           />
         ) : (
           <>
@@ -127,7 +127,7 @@ export default function ResultsScreen() {
             {/* 학습 화면의 안내 문구 줄과 같은 높이(h-10)라서 아래 카드 위치가 같다. */}
             <View className={`${courses.length > 1 ? "mt-4" : "mt-6"} h-10 justify-center`}>
               <Text className="text-base text-ink-soft">
-                유형을 고르면 주차별 성적 흐름을 볼 수 있어요.
+                유형을 고르면 성적 흐름이 보여요.
               </Text>
             </View>
 

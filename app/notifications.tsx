@@ -70,7 +70,7 @@ export default function NotificationsScreen() {
         <EmptyState
           icon="notifications-outline"
           title="새 알림이 없습니다"
-          description="새 소식이 생기면 여기에 표시돼요."
+          description="새 소식이 여기에 표시돼요."
         />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
