@@ -14,7 +14,7 @@ const Y_TICKS = [0, 25, 50, 75, 100];
 // 주차별 성적 꺾은선 그래프. x축은 주차, y축은 0~100점이다.
 //  - 점수가 없는 주차는 선이 끊긴다.
 //  - 점을 누르면(주차 칸 어디든) onSelect(week)로 그 주차를 고른다.
-//  - 지각·기한 초과로 본 주차의 점에는 주황 표시가 붙는다.
+//  - 선택한 주차는 점이 아니라 옅은 바탕색으로만 표시한다.
 export default function ScoreTrendChart({
   points,
   selectedWeek,
@@ -132,17 +132,7 @@ export default function ScoreTrendChart({
             <G key={p.week}>
               {p.score !== null && (
                 <>
-                  <Circle
-                    cx={x(i)}
-                    cy={y(p.score)}
-                    r={p.week === selectedWeek ? 7 : 5}
-                    fill={p.week === selectedWeek ? "#ffffff" : color}
-                    stroke={color}
-                    strokeWidth={p.week === selectedWeek ? 3 : 2}
-                  />
-                  {p.late && (
-                    <Circle cx={x(i) + 7} cy={y(p.score) - 7} r={3.5} fill="#f97316" />
-                  )}
+                  <Circle cx={x(i)} cy={y(p.score)} r={5} fill={color} />
                   <SvgText
                     x={x(i)}
                     y={y(p.score) - 12}

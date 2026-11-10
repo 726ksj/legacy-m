@@ -144,7 +144,7 @@ export default function ResultsKindScreen() {
           {tests.length === 0 ? (
             <EmptyState
               icon="document-text-outline"
-              title={`이 주차에 응시한 ${title} 시험이 없어요`}
+              title="응시한 시험이 없어요"
               description="시험을 보면 결과가 여기에 쌓여요"
             />
           ) : (
