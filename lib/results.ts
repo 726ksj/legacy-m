@@ -19,6 +19,10 @@ export interface WeekTest {
   status: SetStatus;
   // 완료한 시험의 점수/세부/날짜. 아직 끝내지 않았으면 null.
   scoreLabel: string | null;
+  // 성적 흐름 그래프용 숫자 점수. 종합 점수(1차 40% + 2차 60%)와 1차·2차 시험 점수. 끝내지 않았으면 null.
+  score: number | null;
+  firstScore: number | null;
+  finalScore: number | null;
   date: string | null;
   timings: TimingTag[];
 }
@@ -76,7 +80,7 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
       .order("tested_at", { ascending: false }),
     supabase
       .from("vocab_test_attempts")
-      .select("vocab_set_id, round_no, is_late, is_overdue")
+      .select("vocab_set_id, round_no, status, score, is_late, is_overdue")
       .order("round_no", { ascending: true }),
     // 순서 배열은 정답이 걸려 있어 서버 함수로만 진행 상황을 받는다. 불러오지 못해도
     // 나머지 결과는 보여 준다.
@@ -100,6 +104,15 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
     }
   }
   // 응시 기록이 있는 세트(진행 중 판단)와 지각/기한 초과 표시.
+  // 단어의 1차·2차 시험 점수(완료한 회차만).
+  const vocabRoundScore = new Map<string, { first: number | null; final: number | null }>();
+  for (const row of vocabAttempts ?? []) {
+    if (row.status !== "completed" || (row.round_no !== 1 && row.round_no !== 3)) continue;
+    const entry = vocabRoundScore.get(row.vocab_set_id) ?? { first: null, final: null };
+    if (row.round_no === 1) entry.first = Number(row.score);
+    else entry.final = Number(row.score);
+    vocabRoundScore.set(row.vocab_set_id, entry);
+  }
   const vocabStarted = new Set<string>();
   const vocabTimings = new Map<string, TimingTag[]>();
   for (const row of vocabAttempts ?? []) {
@@ -129,6 +142,9 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
           ? "in_progress"
           : "not_started",
       scoreLabel: result ? `${result.score}점` : null,
+      score: result ? Number(result.score) : null,
+      firstScore: vocabRoundScore.get(set.id)?.first ?? null,
+      finalScore: vocabRoundScore.get(set.id)?.final ?? null,
       date: result?.at ?? null,
       timings: vocabTimings.get(set.id) ?? [],
     };
@@ -147,6 +163,9 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
           ? "in_progress"
           : "not_started",
       scoreLabel: row.completed ? `${row.score}점` : null,
+      score: row.completed && row.score !== null ? Number(row.score) : null,
+      firstScore: row.completed ? row.first_score : null,
+      finalScore: row.completed ? row.final_score : null,
       date: row.completed_at,
       timings: kind ? [{ label: TIMING_LABEL[kind], kind }] : [],
     };
@@ -222,6 +241,21 @@ export async function fetchCourseResults(): Promise<CourseResults[]> {
   }
 
   return result;
+}
+
+// 처음 보여 줄 주차: 이번 주차. 모르거나 범위를 벗어나면 시험이 있는 가장 최근 주차.
+export function defaultWeek(course: CourseResults): number {
+  const { currentWeek, totalWeeks } = course;
+  if (currentWeek !== null && currentWeek >= 1 && currentWeek <= totalWeeks) {
+    return currentWeek;
+  }
+  if (currentWeek !== null && currentWeek > totalWeeks && totalWeeks >= 1) {
+    return totalWeeks;
+  }
+  const withTests = course.tests
+    .map((t) => t.week)
+    .filter((w): w is number => w !== null);
+  return withTests.length > 0 ? Math.max(...withTests) : 1;
 }
 
 // 한 주차에 속한 시험. week가 NO_WEEK(0)이면 주차가 지정되지 않은 시험.

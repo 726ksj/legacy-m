@@ -1,19 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { Text } from "../../components/AppText";
 import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { colors } from "../../lib/theme";
-import {
-  fetchCourseResults,
-  NO_WEEK,
-  testsOfWeek,
-  type CourseResults,
-} from "../../lib/results";
+import { fetchCourseResults, type CourseResults } from "../../lib/results";
 import { KINDS } from "../../lib/study";
 import ScreenHeader from "../../components/ScreenHeader";
 import EmptyState from "../../components/EmptyState";
 import KindCard from "../../components/KindCard";
+import { latestChange, trendOf } from "../../lib/trend";
 
 function Chip({
   label,
@@ -40,26 +36,10 @@ function Chip({
   );
 }
 
-// 처음 보여 줄 주차: 이번 주차. 모르거나 범위를 벗어나면 시험이 있는 가장 최근 주차.
-function defaultWeek(course: CourseResults): number {
-  const { currentWeek, totalWeeks } = course;
-  if (currentWeek !== null && currentWeek >= 1 && currentWeek <= totalWeeks) {
-    return currentWeek;
-  }
-  const withTests = course.tests
-    .map((t) => t.week)
-    .filter((w): w is number => w !== null);
-  if (currentWeek !== null && currentWeek > totalWeeks && totalWeeks >= 1) {
-    return totalWeeks;
-  }
-  return withTests.length > 0 ? Math.max(...withTests) : 1;
-}
-
-// 학습 결과 허브: 주차를 고르고, 학습처럼 유형 카드를 눌러 그 주차의 결과를 본다.
+// 학습 결과 허브: 유형 카드에서 최근 점수를 보고, 카드를 누르면 그 유형의 주차별 성적 흐름과 결과를 본다.
 export default function ResultsScreen() {
   const [courses, setCourses] = useState<CourseResults[]>([]);
   const [courseKey, setCourseKey] = useState<string | null>(null);
-  const [week, setWeek] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -86,19 +66,11 @@ export default function ResultsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // 강좌 선택(첫 강좌가 기본)과 그 강좌의 기본 주차(이번 주)를 정한다.
+  // 강좌 선택(첫 강좌가 기본).
   const course = useMemo(
     () => courses.find((c) => c.key === courseKey) ?? courses[0] ?? null,
     [courses, courseKey],
   );
-  useEffect(() => {
-    if (course) setWeek((prev) => prev ?? defaultWeek(course));
-  }, [course]);
-
-  const selectCourse = (c: CourseResults) => {
-    setCourseKey(c.key);
-    setWeek(defaultWeek(c));
-  };
 
   if (loading) {
     return (
@@ -110,13 +82,6 @@ export default function ResultsScreen() {
       </View>
     );
   }
-
-  const weeks = course
-    ? Array.from({ length: course.totalWeeks }, (_, i) => i + 1)
-    : [];
-  const hasNoWeek = course ? testsOfWeek(course, NO_WEEK).length > 0 : false;
-  const selectedWeek = week ?? (course ? defaultWeek(course) : 1);
-  const tests = course ? testsOfWeek(course, selectedWeek) : [];
 
   return (
     <View className="flex-1 bg-blush">
@@ -152,56 +117,36 @@ export default function ResultsScreen() {
                       key={c.key}
                       label={c.label}
                       selected={c.key === course.key}
-                      onPress={() => selectCourse(c)}
+                      onPress={() => setCourseKey(c.key)}
                     />
                   ))}
                 </View>
               </ScrollView>
             )}
 
-            {/* 학습 화면의 안내 문구 자리: 지금 선택된 주차(기본은 이번 주)를 칩으로 보여 주고 바꿀 수 있다. */}
-            {/* 높이를 h-10으로 고정해 학습 화면의 안내 문구 줄과 같게 한다(아래 카드 위치가 같아진다). */}
+            {/* 학습 화면의 안내 문구 줄과 같은 높이(h-10)라서 아래 카드 위치가 같다. */}
             <View className={`${courses.length > 1 ? "mt-4" : "mt-6"} h-10 justify-center`}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="flex-grow-0"
-              >
-                <View className="flex-row gap-2">
-                  {weeks.map((w) => (
-                    <Chip
-                      key={w}
-                      label={`${w}주차`}
-                      selected={selectedWeek === w}
-                      onPress={() => setWeek(w)}
-                    />
-                  ))}
-                  {hasNoWeek && (
-                    <Chip
-                      label="주차 미지정"
-                      selected={selectedWeek === NO_WEEK}
-                      onPress={() => setWeek(NO_WEEK)}
-                    />
-                  )}
-                </View>
-              </ScrollView>
+              <Text className="text-base text-ink-soft">
+                유형을 고르면 주차별 성적 흐름을 볼 수 있어요.
+              </Text>
             </View>
 
             {/* 네 유형을 세로로 놓고, 남는 화면 높이를 똑같이 나눈다. */}
             <View className="mt-4 flex-1 gap-4">
               {KINDS.map((kind) => {
-                // 결과는 응시한 시험만 센다(아직 안 본 시험은 학습 화면에서 본다).
-                const count = tests.filter(
-                  (t) => t.kind === kind && t.status !== "not_started",
-                ).length;
+                // 카드에는 이 유형의 가장 최근 점수와 바로 앞 점수 대비 변화를 보여 준다.
+                const change = latestChange(trendOf(course, kind));
+                const delta = change?.delta ?? null;
+                const deltaText =
+                  delta === null ? "" : delta > 0 ? `  ▲${delta}` : delta < 0 ? `  ▼${-delta}` : "  –";
                 return (
                   <KindCard
                     key={kind}
                     kind={kind}
-                    subtitle={count > 0 ? `시험 ${count}개` : "응시한 시험 없음"}
+                    subtitle={change ? `최근 ${change.score}점${deltaText}` : "응시한 시험 없음"}
                     onPress={() =>
                       router.push(
-                        `/week-results/${kind}?course=${encodeURIComponent(course.key)}&week=${selectedWeek}` as never,
+                        `/week-results/${kind}?course=${encodeURIComponent(course.key)}` as never,
                       )
                     }
                   />
