@@ -111,8 +111,8 @@ export default function ResultsKindScreen() {
               </Text>
             ) : (
               <>
-                <Text className="mb-1 px-2 text-sm text-ink-soft">
-                  한 주에 시험이 여러 개면 평균이에요 · 점을 누르면 그 주차를 볼 수 있어요
+                <Text className="mb-1 px-2 text-sm text-ink-soft" numberOfLines={1}>
+                  주차를 누르면 목록이 바뀌어요
                 </Text>
                 <ScoreTrendChart
                   points={points}

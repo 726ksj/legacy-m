@@ -4,11 +4,11 @@ import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-
 import { Text } from "./AppText";
 import type { TrendPoint } from "../lib/trend";
 
-const PLOT_H = 168;
+const PLOT_H = 210;
 const PAD_TOP = 22;
 const PAD_BOTTOM = 26;
 const SVG_H = PLOT_H + PAD_TOP + PAD_BOTTOM;
-const MIN_SLOT = 46; // 주차 한 칸의 최소 너비(주차가 많으면 가로 스크롤)
+const VISIBLE_WEEKS = 4; // 한 화면에 보이는 주차 수(그보다 많으면 가로 스크롤)
 const Y_TICKS = [0, 25, 50, 75, 100];
 
 // 주차별 성적 꺾은선 그래프. x축은 주차, y축은 0~100점이다.
@@ -31,7 +31,8 @@ export default function ScoreTrendChart({
   const [width, setWidth] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const n = Math.max(points.length, 1);
-  const slot = Math.max(MIN_SLOT, width > 0 ? width / n : MIN_SLOT);
+  // 4주차까지는 화면 너비를 꽉 채우고, 5주차부터는 칸 너비를 유지한 채 가로로 스크롤한다.
+  const slot = width > 0 ? width / Math.min(n, VISIBLE_WEEKS) : 60;
   const contentW = slot * n;
   const y = (v: number) => PAD_TOP + (1 - v / 100) * PLOT_H;
   const x = (i: number) => slot * (i + 0.5);
@@ -136,7 +137,7 @@ export default function ScoreTrendChart({
                   <SvgText
                     x={x(i)}
                     y={y(p.score) - 12}
-                    fontSize={11}
+                    fontSize={12}
                     fontWeight="bold"
                     fill="#3a1b25"
                     textAnchor="middle"
@@ -148,7 +149,7 @@ export default function ScoreTrendChart({
               <SvgText
                 x={x(i)}
                 y={SVG_H - 8}
-                fontSize={11}
+                fontSize={12}
                 fontWeight={p.week === selectedWeek ? "bold" : "normal"}
                 fill={p.week === selectedWeek ? color : "#8c6b76"}
                 textAnchor="middle"
